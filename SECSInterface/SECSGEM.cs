@@ -300,13 +300,13 @@ namespace SECSInterface
         private void E87_InService(string PortName)
         {
             g_iE87LPTSM_LPID = PortNameConvert(PortName);
-            Process_E87_LPTSM(LPTSM_CMD_IN_SERVICE);
+            Process_E87_LPTSM(LPTSM_CMD_IN_SERVICE, PortName);
         }
 
         private void E87_OutOfService(string PortName)
         {
             g_iE87LPTSM_LPID = PortNameConvert(PortName);
-            Process_E87_LPTSM(LPTSM_CMD_OUT_SERVICE);
+            Process_E87_LPTSM(LPTSM_CMD_OUT_SERVICE, PortName);
         }
 
         private void E87_LoadComplete(string PortName)
@@ -318,18 +318,18 @@ namespace SECSInterface
                 return;
             }
             g_iE87LPTSM_LPID = PortNameConvert(PortName);
-            Process_E87_LPTSM(LPTSM_CMD_LOAD_COMPLETE);
-            Process_E87_CSM_CarrierIDStatus(CSM_CMD_CARRIER_ID_READ_SUCCESS);
-            Process_E87_CSM_CarrierSlopMapStatus(CSM_CMD_CARRIER_IS_INSTANTIATED);
-            Process_E87_CSM_CarrierAccessingStatus(CSM_CMD_CARRIER_IS_INSTANTIATED);
+            Process_E87_LPTSM(LPTSM_CMD_LOAD_COMPLETE, PortName);
+            Process_E87_CSM_CarrierIDStatus(CSM_CMD_CARRIER_ID_READ_SUCCESS, PortName);
+            Process_E87_CSM_CarrierSlopMapStatus(CSM_CMD_CARRIER_IS_INSTANTIATED, PortName);
+            Process_E87_CSM_CarrierAccessingStatus(CSM_CMD_CARRIER_IS_INSTANTIATED, PortName);
 
         }
 
         private void E87_UnLoadComplete(string PortName)
         {
             g_iE87LPTSM_LPID = PortNameConvert(PortName);
-            Process_E87_LPTSM(LPTSM_CMD_UNLOAD_COMPLETE);
-            Process_E87_CSM_CarrierIDStatus(CSM_CMD_UNLOAD_COMPLETE);
+            Process_E87_LPTSM(LPTSM_CMD_UNLOAD_COMPLETE, PortName);
+            Process_E87_CSM_CarrierIDStatus(CSM_CMD_UNLOAD_COMPLETE, PortName);
             Process_E40_ProcessJobStateModel(PJSM_CMD_FOUP_REMOVED);
             Process_E94_ControlJobStateModel(CJSM_CMD_CJ_DELETE);
             g_iE40PJDataNumber = 0;
@@ -338,10 +338,10 @@ namespace SECSInterface
         private void E87_ReadyToUnload(string PortName)
         {
             g_iE87LPTSM_LPID = PortNameConvert(PortName);
-            Process_E87_LPTSM(LPTSM_CMD_READY_TO_UNLOAD);
+            Process_E87_LPTSM(LPTSM_CMD_READY_TO_UNLOAD, PortName);
         }
 
-        private void Process_E87_CSM_CarrierSlopMapStatus(int iCommand,string portName)
+        private void Process_E87_CSM_CarrierSlopMapStatus(int iCommand, string portName)
         {
             int i, j;
             //long lSVID, lRetval;
@@ -350,25 +350,37 @@ namespace SECSInterface
             //object Value;
             int iSlopMapValue;
 
-            if ((iCommand == CSM_CMD_UNLOAD_COMPLETE) || (iCommand == CSM_CMD_CARRIER_IS_INSTANTIATED))
+            Node port = NodeManagement.Get(portName);
+            if (port == null)
             {
-                Carrier_Data1.SlopMapStatus = CARRIER_SLOP_MAP_STATUS_0_SLOP_MAP_NOT_READ;
+                logger.Error("Process_E87_CSM_CarrierIDStatus err: PortName:" + portName + " not exist!");
+                return;
+            }
+            Carrier cst = CarrierManagement.Get(port.FoupID);
+            if (cst == null)
+            {
+                cst = Process_E87_CSM_CarrierObjCreate(portName);
             }
 
-            switch (Carrier_Data1.SlopMapStatus)
+            if ((iCommand == CSM_CMD_UNLOAD_COMPLETE) || (iCommand == CSM_CMD_CARRIER_IS_INSTANTIATED))
+            {
+                cst.SlopMapStatus = CARRIER_SLOP_MAP_STATUS_0_SLOP_MAP_NOT_READ;
+            }
+
+            switch (cst.SlopMapStatus)
             {
                 case CARRIER_SLOP_MAP_STATUS_0_SLOP_MAP_NOT_READ:
                     if (iCommand == CSM_CMD_SLOP_MAP_READ_SUCCESS)
                     {
-                        Carrier_Data1.SlopMapStatus = CARRIER_SLOP_MAP_STATUS_1_WAITING_FOR_HOST;
+                        cst.SlopMapStatus = CARRIER_SLOP_MAP_STATUS_1_WAITING_FOR_HOST;
 
                         // Update  SV  
-                        objTemp = (object)Carrier_Data1.SlopMapStatus;
+                        objTemp = (object)cst.SlopMapStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_SV_SLOT_MAP_STATUS_1, ref objTemp);
 
-                        objTemp = (object)Carrier_Data1.SlopMapCapcity;
+                        objTemp = (object)cst.SlopMapCapcity;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_SV_SLOT_MAP_1, ref objTemp);
-                        for (i = 0; i < Carrier_Data1.SlopMapCapcity; i++)
+                        for (i = 0; i < cst.SlopMapCapcity; i++)
                         {
                             iSlopMapValue = CARRIER_SLOP_MAP_3_CORRECTLY_OCCUPIED;
                             objTemp = (object)iSlopMapValue;
@@ -376,18 +388,18 @@ namespace SECSInterface
                         }
 
                         // Update  DV
-                        objTemp = (object)Carrier_Data1.SlopMapCapcity;
+                        objTemp = (object)cst.SlopMapCapcity;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_SLOT_MAP, ref objTemp);
-                        for (i = 0; i < Carrier_Data1.SlopMapCapcity; i++)
+                        for (i = 0; i < cst.SlopMapCapcity; i++)
                         {
                             iSlopMapValue = CARRIER_SLOP_MAP_3_CORRECTLY_OCCUPIED;
                             objTemp = (object)iSlopMapValue;
                             g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_SLOT_MAP_1 + i, ref objTemp);   // for SlotMap DV 
                         }
 
-                        objTemp = (object)Carrier_Data1.CarrierID;
+                        objTemp = (object)cst.CarrierID;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID, ref objTemp);
-                        objTemp = (object)Carrier_Data1.SlopMapStatus;
+                        objTemp = (object)cst.SlopMapStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_SLOT_MAP_STATUS, ref objTemp);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_CSM_SCT14_WAITING_FOR_HOST);
                     }
@@ -395,16 +407,16 @@ namespace SECSInterface
                 case CARRIER_SLOP_MAP_STATUS_1_WAITING_FOR_HOST:
                     if (iCommand == CSM_CMD_PROCEED_WITH_CARRIER_RECEIVED)
                     {
-                        Carrier_Data1.SlopMapStatus = CARRIER_SLOP_MAP_STATUS_2_SLOT_MAP_VERIFICATION_OK;
+                        cst.SlopMapStatus = CARRIER_SLOP_MAP_STATUS_2_SLOT_MAP_VERIFICATION_OK;
 
                         // Update SV
-                        objTemp = (object)Carrier_Data1.SlopMapStatus;
+                        objTemp = (object)cst.SlopMapStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_SV_SLOT_MAP_STATUS_1, ref objTemp);
 
                         // Update DV
-                        objTemp = (object)Carrier_Data1.CarrierID;
+                        objTemp = (object)cst.CarrierID;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID, ref objTemp);
-                        objTemp = (object)Carrier_Data1.SlopMapStatus;
+                        objTemp = (object)cst.SlopMapStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_SLOT_MAP_STATUS, ref objTemp);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_CSM_SCT15_SLOT_MAP_VERIFICATION_OK_HOST);
                         // DV port ID ,Location ID need update
@@ -416,39 +428,49 @@ namespace SECSInterface
         }
 
         // LP1 Carrier ID Status
-        private void Process_E87_CSM_CarrierIDStatus(int iCarrierIDStatus_Command,string portName)
+        private void Process_E87_CSM_CarrierIDStatus(int iCarrierIDStatus_Command, string portName)
         {
             long lSVID, lRetval;
             object objTemp;
             QGACTIVEXLib.SV_DATA_TYPE GetFormat;
             object Value;
+            Node port = NodeManagement.Get(portName);
+            if (port == null)
+            {
+                logger.Error("Process_E87_CSM_CarrierIDStatus err: PortName:" + portName + " not exist!");
+                return;
+            }
+            Carrier cst = CarrierManagement.Get(port.FoupID);
+            if (cst == null)
+            {
+                cst = Process_E87_CSM_CarrierObjCreate(portName);
+            }
 
             if (iCarrierIDStatus_Command == CSM_CMD_UNLOAD_COMPLETE)
             {
-                objTemp = (object)Carrier_Data1.CarrierID;
+                objTemp = (object)port.FoupID;
                 g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID, ref objTemp);
                 g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_CSM_SCT21_NO_STATE);
 
                 // Clear Carrier ID and status
-                Carrier_Data1.IDStatus = CARRIER_ID_STATUS_0_ID_NOT_READ;
-                Carrier_Data1.CarrierID = "";
-                objTemp = (object)Carrier_Data1.CarrierID;
-                g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_SV_CARRIER_ID_1, ref objTemp);
+                int portNo = PortNameConvert(portName);
+                objTemp = (object)"";
+                g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_SV_CARRIER_ID_1 + portNo - 1, ref objTemp);
             }
 
-            switch (Carrier_Data1.IDStatus)
+            switch (cst.IDStatus)
             {
                 case CARRIER_ID_STATUS_0_ID_NOT_READ:
                     if (iCarrierIDStatus_Command == CSM_CMD_CARRIER_ID_READ_SUCCESS)
                     {
                         // Update SV
-                        Carrier_Data1.IDStatus = CARRIER_ID_STATUS_1_WAITING_FOR_HOST;
-                        Process_E87_CSM_CarrierObjCreate();
+                        cst.IDStatus = CARRIER_ID_STATUS_1_WAITING_FOR_HOST;
+
 
                         // Update DV
-                        objTemp = (object)Carrier_Data1.CarrierID;
+                        objTemp = (object)port.FoupID;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID, ref objTemp);
-                        objTemp = (object)Carrier_Data1.IDStatus;
+                        objTemp = (object)cst.IDStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID_STATUS, ref objTemp);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_CSM_SCT3_WAITING_FOR_HOST);
                     }
@@ -456,32 +478,32 @@ namespace SECSInterface
                 case CARRIER_ID_STATUS_1_WAITING_FOR_HOST:
                     if (iCarrierIDStatus_Command == CSM_CMD_PROCEED_WITH_CARRIER_RECEIVED)
                     {
-                        Carrier_Data1.IDStatus = CARRIER_ID_STATUS_2_ID_VERIFICATION_OK;
+                        cst.IDStatus = CARRIER_ID_STATUS_2_ID_VERIFICATION_OK;
 
                         // Update SV
 
-                        objTemp = (object)Carrier_Data1.IDStatus;
+                        objTemp = (object)cst.IDStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_SV_CARRIER_ID_STATUS_1, ref objTemp);
 
                         // Update DV
-                        objTemp = (object)Carrier_Data1.CarrierID;
+                        objTemp = (object)cst.CarrierID;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID, ref objTemp);
-                        objTemp = (object)Carrier_Data1.IDStatus;
+                        objTemp = (object)cst.IDStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID_STATUS, ref objTemp);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_CSM_SCT8_ID_VERIFICATION_OK);
                     }
                     if (iCarrierIDStatus_Command == CSM_CMD_CANCEL_CARRIER_AT_PORT_RECEIVED)
                     {
-                        Carrier_Data1.IDStatus = CARRIER_ID_STATUS_3_ID_VERIFICATION_FAILED;
+                        cst.IDStatus = CARRIER_ID_STATUS_3_ID_VERIFICATION_FAILED;
 
                         // Update SV
-                        objTemp = (object)Carrier_Data1.IDStatus;
+                        objTemp = (object)cst.IDStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_SV_CARRIER_ID_STATUS_1, ref objTemp);
 
                         // Update DV
-                        objTemp = (object)Carrier_Data1.CarrierID;
+                        objTemp = (object)cst.CarrierID;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID, ref objTemp);
-                        objTemp = (object)Carrier_Data1.IDStatus;
+                        objTemp = (object)cst.IDStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID_STATUS, ref objTemp);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_CSM_SCT9_ID_VERIFICATION_FAIL);
                     }
@@ -491,15 +513,24 @@ namespace SECSInterface
 
         }
 
-        private void Process_E87_CSM_CarrierObjCreate()
+        private Carrier Process_E87_CSM_CarrierObjCreate(string portName)
         {
             object objTemp;
             int i;
             int iSlopMapValue;
             //Carrier_Data1.CarrierID = sCarrierID;
             //Carrier_Data1.Capcity   = CarrierCommand1.Capcity;
+            Node port = NodeManagement.Get(portName);
+            if (port == null)
+            {
+                logger.Error("Process_E87_CSM_CarrierObjCreate err: PortName:" + portName + " not exist!");
+                return null;
+            }
+
+            Carrier Carrier_Data1 = new Carrier();
             Carrier_Data1.ContentMapList = 0;
-            Carrier_Data1.LocationID = "LP1";
+            Carrier_Data1.LocationID = portName;
+            Carrier_Data1.CarrierID = port.FoupID;
             //Carrier_Data1.SlopMapStatus = CARRIER_SLOP_MAP_STATUS_0_SLOP_MAP_NOT_READ;
             Carrier_Data1.SubstrateCount = 0;
             Carrier_Data1.Usage = "";
@@ -538,11 +569,11 @@ namespace SECSInterface
                 objTemp = (object)iSlopMapValue;
                 g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_IDATA_SLOT_MAP_1_1 + i, ref objTemp); // for SlotMap1 SV 
             }
-
+            return Carrier_Data1;
         }
 
         // * E87 LPTSM
-        private void Process_E87_LPTSM(int iE87LPTSM_Command,string portName)
+        private void Process_E87_LPTSM(int iE87LPTSM_Command, string portName)
         {
             long lSVID, lRetval;
             object objTemp;
@@ -660,7 +691,7 @@ namespace SECSInterface
         }
 
         // LP1 Access Mode
-        private void Process_E87_AccessModeStateModel(int iCommand,string portName)
+        private void Process_E87_AccessModeStateModel(int iCommand, string portName)
         {
             //long lSVID, lRetval;
             object objTemp;
@@ -705,13 +736,7 @@ namespace SECSInterface
 
         }
 
-        private void btn_E87_ReadyToUnload_Click(object sender, EventArgs e)
-        {
-            g_iE87LPTSM_LPID = LPTSM_PORT_ID_1;
-            Process_E87_LPTSM(LPTSM_CMD_READY_TO_UNLOAD);
-        }
-
-        private void Process_E87_CSM_CarrierAccessingStatus(int iCommand,string portName)
+        private void Process_E87_CSM_CarrierAccessingStatus(int iCommand, string portName)
         {
             int i, j;
             long lSVID, lRetval;
@@ -720,21 +745,33 @@ namespace SECSInterface
             object Value;
             int iSlopMapValue;
 
-            if ((iCommand == CSM_CMD_UNLOAD_COMPLETE) || (iCommand == CSM_CMD_CARRIER_IS_INSTANTIATED))
+            Node port = NodeManagement.Get(portName);
+            if (port == null)
             {
-                Carrier_Data1.AccessingStatus = CARRIER_ACCESSING_STATUS_0_NOT_ACCESSED;
+                logger.Error("Process_E87_CSM_CarrierIDStatus err: PortName:" + portName + " not exist!");
+                return;
+            }
+            Carrier cst = CarrierManagement.Get(port.FoupID);
+            if (cst == null)
+            {
+                cst = Process_E87_CSM_CarrierObjCreate(portName);
             }
 
-            switch (Carrier_Data1.AccessingStatus)
+            if ((iCommand == CSM_CMD_UNLOAD_COMPLETE) || (iCommand == CSM_CMD_CARRIER_IS_INSTANTIATED))
+            {
+                cst.AccessingStatus = CARRIER_ACCESSING_STATUS_0_NOT_ACCESSED;
+            }
+
+            switch (cst.AccessingStatus)
             {
                 case CARRIER_ACCESSING_STATUS_0_NOT_ACCESSED:
                     if (iCommand == CSM_CMD_CARRIER_START_PROCESS)
                     {
                         //
-                        objTemp = (object)Carrier_Data1.CarrierID;
+                        objTemp = (object)cst.CarrierID;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID, ref objTemp);
-                        Carrier_Data1.AccessingStatus = CARRIER_ACCESSING_STATUS_1_IN_ACCESS;
-                        objTemp = (object)Carrier_Data1.AccessingStatus;
+                        cst.AccessingStatus = CARRIER_ACCESSING_STATUS_1_IN_ACCESS;
+                        objTemp = (object)cst.AccessingStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ACCESSING_STATUS, ref objTemp);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_CSM_SCT18_IN_ACCESS);
                     }
@@ -742,19 +779,19 @@ namespace SECSInterface
                 case CARRIER_ACCESSING_STATUS_1_IN_ACCESS:
                     if (iCommand == CSM_CMD_CARRIER_PROCESS_COMPLETE)
                     {
-                        objTemp = (object)Carrier_Data1.CarrierID;
+                        objTemp = (object)cst.CarrierID;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID, ref objTemp);
-                        Carrier_Data1.AccessingStatus = CARRIER_ACCESSING_STATUS_2_CARRIER_COMPLETE;
-                        objTemp = (object)Carrier_Data1.AccessingStatus;
+                        cst.AccessingStatus = CARRIER_ACCESSING_STATUS_2_CARRIER_COMPLETE;
+                        objTemp = (object)cst.AccessingStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ACCESSING_STATUS, ref objTemp);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_CSM_SCT19_CARRIER_COMPLETE);
                     }
                     if (iCommand == CSM_CMD_CARRIER_PROCESS_STOPPED)
                     {
-                        objTemp = (object)Carrier_Data1.CarrierID;
+                        objTemp = (object)cst.CarrierID;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID, ref objTemp);
-                        Carrier_Data1.AccessingStatus = CARRIER_ACCESSING_STATUS_3_CARRIER_STOPPED;
-                        objTemp = (object)Carrier_Data1.AccessingStatus;
+                        cst.AccessingStatus = CARRIER_ACCESSING_STATUS_3_CARRIER_STOPPED;
+                        objTemp = (object)cst.AccessingStatus;
                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ACCESSING_STATUS, ref objTemp);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_CSM_SCT20_CARRIER_STOPPED);
                     }
@@ -875,6 +912,7 @@ namespace SECSInterface
                     case CJSM_5_COMPLETED:
                         if (iCommand == CJSM_CMD_CJ_DELETE)
                         {
+                           
                             Carrier_Data1.AccessingStatus = CARRIER_ACCESSING_STATUS_2_CARRIER_COMPLETE;
                             CJ_Data1.CJState = CJSM_NOT_EXIST;
                             g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E94_CE_CJSM_SCT13_NO_STATE);
@@ -995,35 +1033,150 @@ namespace SECSInterface
         {
             long lResult;
             object Value;
+            QGACTIVEXLib.SV_DATA_TYPE GetFormat;
             switch (MsgID)
             {
                 case QGACTIVEXLib.PP_TYPE.RECEIVE_E87_PROCEED_WITH_CARRIER://HOST驗證成功，開始MAPPING FOUP
-                    
+                    CarrierCommand1.Capcity = 0;
+                    CarrierCommand1.ContentMapExistFlag = 0;
+                    CarrierCommand1.SlotMapExistFlag = 0;
+                    CarrierCommand1.Command = CSM_CMD_PROCEED_WITH_CARRIER_RECEIVED;
                     string[] split = PPID.Split(new Char[] { ',', '\t' });
-                    string CSTID = split[0].ToString();
-                    int portNo = int.Parse(split[1].ToString());
-                    string portName = "LOADPORT"+ portNo.ToString("00");
-                    Node port = NodeManagement.Get(portName);
-                    if (port != null)
-                    {
-                        port.FoupIdStatus = CARRIER_ID_STATUS_2_ID_VERIFICATION_OK;
+                    CarrierCommand1.CarrierID = split[0].ToString();
+                    CarrierCommand1.PTN = int.Parse(split[1].ToString());
 
-                        Work(portName, "LOADPORT_OPEN");
-                    }
+                    break;
+
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E87_PROCEED_WITH_CARRIER_CAPACITY:
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E87_CAPACITY, out GetFormat, out Value);
+
+                    CarrierCommand1.Capcity = int.Parse(Value.ToString());
                     break;
                 case QGACTIVEXLib.PP_TYPE.RECEIVE_E87_PROCEED_WITH_CARRIER_CONTENT_MAP:
-                    lResult = axQGWrapper1.GetSV(GemSystemID.E87_CONTENT_MAP, out GetFormat, out Value);
-                    lbl_ContentMap.Text = Value.ToString();
 
-                    j = int.Parse(Value.ToString());
-                    for (i = 0; i < j; i++)
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E87_CONTENT_MAP, out GetFormat, out Value);
+
+
+                    int j = int.Parse(Value.ToString());
+                    for (int i = 0; i < j; i++)
                     {
+                        int slotNo = i + 1;
                         lResult = axQGWrapper1.GetSV(GemSystemID.E87_CTMAP_LOTID1 + i, out GetFormat, out Value);
+
                         CarrierCommand1.LotID[i] = Value.ToString();
                         lResult = axQGWrapper1.GetSV(GemSystemID.E87_CTMAP_SUBSTID1 + i, out GetFormat, out Value);
                         CarrierCommand1.SubStID[i] = Value.ToString();
                     }
-                    CarrierCommand1.ContentMapExistFlag = 1;
+
+                    break;
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E87_PROCEED_WITH_CARRIER_SLOP_MAP:
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E87_SLOT_MAP, out GetFormat, out Value);
+
+
+                    j = int.Parse(Value.ToString());
+                    for (int i = 0; i < j; i++)
+                    {
+                        lResult = axQGWrapper1.GetSV(GemSystemID.E87_SLOT_MAP_1 + i, out GetFormat, out Value);
+                        CarrierCommand1.SlopMap[i] = int.Parse(Value.ToString());
+                    }
+                    CarrierCommand1.SlotMapExistFlag = 1;
+                    break;
+
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E87_PROCEED_WITH_CARRIER_DATA_END:
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E87_CAPACITY, out GetFormat, out Value);
+
+                    CarrierCommand1.Capcity = int.Parse(Value.ToString());
+
+
+                    string portName = "LOADPORT" + CarrierCommand1.PTN.ToString("00");
+                    Node port = NodeManagement.Get(portName);
+                    if (port != null)
+                    {
+                        Carrier cat = CarrierManagement.Get(port.FoupID);
+                        cat.IDStatus = CARRIER_ID_STATUS_2_ID_VERIFICATION_OK;
+
+                        Work(portName, "LOADPORT_OPEN");
+                    }
+                    break;
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E40_PJ_CREATE_ENHANCE:
+
+                    ProcessJob PJ_Data1 = new ProcessJob();
+
+                    PJ_Data1.PJ_ObjID = PPID.ToString();
+
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_CARRIER_QUANTITY, out GetFormat, out Value);
+
+                    PJ_Data1.CarrierQuantity = int.Parse(Value.ToString());
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_SLOT_NUMBER, out GetFormat, out Value);
+
+                    PJ_Data1.SlopNumber = int.Parse(Value.ToString());
+                    for (int i = 0; i < PJ_Data1.SlopNumber; i++)
+                    {
+                        lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_SLOT_ID_1 + i, out GetFormat, out Value);
+                        PJ_Data1.SlotID[i] = int.Parse(Value.ToString());
+
+                    }
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_PRRECIPEMETHOD, out GetFormat, out Value);
+                  
+                    PJ_Data1.PRRecipeMethod = int.Parse(Value.ToString());
+
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_PRPROCESSSTART, out GetFormat, out Value);
+                    
+                    PJ_Data1.ProcessStart = int.Parse(Value.ToString());
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_CARRIER1_ID, out GetFormat, out Value);
+                   
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_RCPSPEC, out GetFormat, out Value);
+                  
+                    PJ_Data1.RcpSpec = Value.ToString();
+
+                    ProcessJobManagement.Add(PJ_Data1.PJ_ObjID, PJ_Data1);
+                    break;
+
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E40_PJ_MULTI_CREATE_DATA:
+
+                    PJ_Data1 = new ProcessJob();
+                    PJ_Data1.PJ_ObjID = PPID.ToString();
+
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_CARRIER_QUANTITY, out GetFormat, out Value);
+                
+                    PJ_Data1.CarrierQuantity = int.Parse(Value.ToString());
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_SLOT_NUMBER, out GetFormat, out Value);
+                   
+                    PJ_Data1.SlopNumber = int.Parse(Value.ToString());
+                    for (int i = 0; i < PJ_Data1.SlopNumber; i++)
+                    {
+                        lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_SLOT_ID_1 + i, out GetFormat, out Value);
+                        PJ_Data1.SlotID[i] = int.Parse(Value.ToString());
+
+                    }
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_PRRECIPEMETHOD, out GetFormat, out Value);
+                   
+                    PJ_Data1.PRRecipeMethod = int.Parse(Value.ToString());
+
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_PRPROCESSSTART, out GetFormat, out Value);
+                 
+                    PJ_Data1.ProcessStart = int.Parse(Value.ToString());
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_CARRIER1_ID, out GetFormat, out Value);
+                   
+
+                    lResult = axQGWrapper1.GetSV(GemSystemID.E40_PJ_CREATE_RCPSPEC, out GetFormat, out Value);
+                    
+                    PJ_Data1.RcpSpec = Value.ToString();
+                    ProcessJobManagement.Add(PJ_Data1.PJ_ObjID, PJ_Data1);
+                    break;
+
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_OBJID:
+
                     break;
             }
         }
@@ -1058,11 +1211,13 @@ namespace SECSInterface
                 Node Target = NodeManagement.Get(TargetName);
                 if (Target != null)
                 {
+
                     switch (Target.Type.ToUpper())
                     {
                         case "LOADPORT":
                             if (Target.AccessAutoMode)
                             {
+                                Carrier cst = CarrierManagement.Get(Target.FoupID);
                                 switch (Task.ProceedTask.TaskName)
                                 {
                                     case "LOADPORT_CLAMP":
@@ -1098,11 +1253,11 @@ namespace SECSInterface
                                         //發送SlotMapAvailable事件
                                         int count = 0;
                                         for (int i = 0; i < Target.MappingResult.Length; i++)
-                                        {                                            
+                                        {
                                             switch (Target.MappingResult[i])
                                             {
-                                                case '0':                                                    
-                                                     objTemp = (object)CARRIER_SLOP_MAP_1_EMPTY;
+                                                case '0':
+                                                    objTemp = (object)CARRIER_SLOP_MAP_1_EMPTY;
                                                     g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_IDATA_SLOT_MAP_1_1 + i, ref objTemp); // for SlotMap1 SV 
                                                     g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_SLOT_MAP_1 + i, ref objTemp);      // for SlotMap DV 
                                                     break;
@@ -1131,7 +1286,7 @@ namespace SECSInterface
                                                     break;
                                             }
 
-                                            
+
                                         }
 
                                         // Update  SV  
@@ -1150,7 +1305,7 @@ namespace SECSInterface
 
                                         objTemp = (object)Target.FoupID;
                                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_CARRIER_ID, ref objTemp);
-                                        objTemp = (object)Carrier_Data1.SlopMapStatus;
+                                        objTemp = (object)cst.SlopMapStatus;
                                         g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_SLOT_MAP_STATUS, ref objTemp);
                                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_CSM_SCT14_WAITING_FOR_HOST);
 
@@ -1182,7 +1337,7 @@ namespace SECSInterface
                 {
                     //發送FOUP Arrived 事件
                     objTemp = (object)PortNameConvert(PortName);
-                    g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_PORT_ID, ref objTemp);                   
+                    g_lOperationResult = axQGWrapper1.UpdateSV((int)EqpID.E87_DV_PORT_ID, ref objTemp);
 
                     g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E87_CE_LP1_FOUP_ARRIVED);
                     Work(PortName, "LOADPORT_CLAMP");
@@ -1254,7 +1409,7 @@ namespace SECSInterface
         public int g_iE40PJDataNumber = 0;
 
         // E87 data -----------------------------------------
-       
+
 
         public struct CarrierCommand
         {
@@ -1304,39 +1459,7 @@ namespace SECSInterface
         ChgAccess_Data ChgAccess_Data1 = new ChgAccess_Data(0);
 
         // E40 data -----------------------------------------------------
-        public struct PJ_Data
-        {
-            //Create Data
-            public string PJ_ObjID;
-            public int CarrierQuantity;
-            public string CarrierID;
-            public int SlopNumber;
-            public int[] SlotID;
-            public int PRRecipeMethod;
-            public string RcpSpec;
-            public int ProcessStart;
-
-            //run time data
-            public int PJState;
-
-
-            public PJ_Data(int p1)
-            {
-                CarrierQuantity = p1;
-                PJ_ObjID = "";
-                CarrierID = "";
-                SlopNumber = 0;
-                PRRecipeMethod = 0;
-                RcpSpec = "";
-                ProcessStart = 0;
-                SlotID = new int[0];
-
-                PJState = 0;
-
-            }
-        }
-        PJ_Data PJ_Data1 = new PJ_Data();
-        PJ_Data PJ_Data2 = new PJ_Data();
+        
 
         public struct PJ_Command
         {
@@ -1354,32 +1477,7 @@ namespace SECSInterface
         PJ_Command PJ_Command1 = new PJ_Command();
 
         // E94 data ---------------------------------------------------------
-        public struct CJ_Data
-        {
-            //Create Data
-            public string CJ_ObjID;
-            public int PrCtrlSpecNumber;
-            public string[] PrCtrlSpec_PrObjID;
-            public int ProcessOrderMgnt;
-            public int StartMethod;
-
-            //runtime data
-            public int CJState;
-
-            public CJ_Data(int p1)
-            {
-                PrCtrlSpecNumber = p1;
-                CJ_ObjID = "";
-                PrCtrlSpec_PrObjID = new string[0];
-
-                ProcessOrderMgnt = 0;
-                StartMethod = 0;
-
-                CJState = 0;
-            }
-
-        }
-        CJ_Data CJ_Data1 = new CJ_Data();
+        
 
         public struct CJ_Command
         {
