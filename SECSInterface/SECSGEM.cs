@@ -1036,6 +1036,8 @@ namespace SECSInterface
             object Value;
             string portName = "";
             Node port;
+            ControlJob cj;
+            ProcessJob pj;
             int PTN;
             QGACTIVEXLib.SV_DATA_TYPE GetFormat;
             switch (MsgID)
@@ -1416,6 +1418,89 @@ namespace SECSInterface
                     objTemp2 = "";
                     g_lOperationResult = axQGWrapper1.Command((int)QGACTIVEXLib.PP_TYPE.CMD_E40_REPLY_S16F22_PJ_GET_SPACE_SEND, ref objTemp1, ref objTemp2);
                     logger.Debug(" <== Reply PrJobSpace:" + objTemp1.ToString());
+                    break;
+
+
+                // E94 Area --------------------------------------------
+                //Receive S14F9 CJ Create 
+                // (ObjID)
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_OBJID:
+                    logger.Debug(" ==>Receive CJ Create, ObjID:" + PPID.ToString());
+                    CJ_Command1.CJ_ObjID = PPID.ToString();
+                   
+                    break;
+                // (ProcessingCtrlSpec)
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_PRCTRLSPEC_1:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_PRCTRLSPEC_2:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_PRCTRLSPEC_3:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_PRCTRLSPEC_4:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_PRCTRLSPEC_5:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_PRCTRLSPEC_6:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_PRCTRLSPEC_7:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_PRCTRLSPEC_8:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_PRCTRLSPEC_MAX:
+                    logger.Debug(" ==>Receive CJ_Create, ProcessingCtrlSpec:" + PPID.ToString());
+                     cj = ControlJobManagement.Get(CJ_Command1.CJ_ObjID);
+                    if (cj != null)
+                    {
+                        cj.PrCtrlSpec_PrObjID.Add(PPID.ToString());
+
+                    }
+                    else
+                    {
+                        logger.Error("CJ ID not exist. CJ:"+ CJ_Command1.CJ_ObjID);
+                    }
+                    break;
+                // (ProcessOrderMgmt)
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_PRORDERMGMT:
+                     cj = ControlJobManagement.Get(CJ_Command1.CJ_ObjID);
+                    if (cj != null)
+                    {
+                        cj.ProcessOrderMgnt = int.Parse(PPID.ToString());
+                    }
+                    else
+                    {
+                        logger.Error("CJ ID not exist. CJ:" + CJ_Command1.CJ_ObjID);
+                    }
+                    break;
+                // (StartMethod)
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_STARTMETHOD:
+                    cj = ControlJobManagement.Get(CJ_Command1.CJ_ObjID);
+                    if (cj != null)
+                    {
+                        cj.StartMethod = int.Parse(PPID.ToString());
+                    }
+                    else
+                    {
+                        logger.Error("CJ ID not exist. CJ:" + CJ_Command1.CJ_ObjID);
+                    }
+                    break;
+                // (CarrierInputSpec)
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_CARRIERID_INPUT_1:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_CARRIERID_INPUT_MAX:
+                    cj = ControlJobManagement.Get(CJ_Command1.CJ_ObjID);
+                    if (cj != null)
+                    {
+                        cj.CarrierInputSpec.Add(PPID.ToString());
+                    }
+                    else
+                    {
+                        logger.Error("CJ ID not exist. CJ:" + CJ_Command1.CJ_ObjID);
+                    }
+                    break;
+                // (MtrlOutSpec)
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_CARRIERID_OUT_SRC_1:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_CARRIERID_OUT_DST_MAX:
+                    cj = ControlJobManagement.Get(CJ_Command1.CJ_ObjID);
+                    if (cj != null)
+                    {
+                        ControlJob.OutSpec outS = new ControlJob.OutSpec();
+                        outS.SrcCarrierID
+                    }
+                    else
+                    {
+                        logger.Error("CJ ID not exist. CJ:" + CJ_Command1.CJ_ObjID);
+                    }
                     break;
             }
         }
