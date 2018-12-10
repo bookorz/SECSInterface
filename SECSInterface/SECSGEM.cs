@@ -1426,6 +1426,7 @@ namespace SECSInterface
                 // (ObjID)
                 case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_OBJID:
                     logger.Debug(" ==>Receive CJ Create, ObjID:" + PPID.ToString());
+                    CJ_Command1 = new CJ_Command();
                     CJ_Command1.CJ_ObjID = PPID.ToString();
                    
                     break;
@@ -1489,18 +1490,135 @@ namespace SECSInterface
                     }
                     break;
                 // (MtrlOutSpec)
-                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_CARRIERID_OUT_SRC_1:
-                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_CARRIERID_OUT_DST_MAX:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_CARRIERID_OUT_SRC_1:   
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_CARRIERID_OUT_SRC_MAX:
+                    logger.Debug(" ==>Receive CJ_Create, MtrlOutSpec Src CarrierID:" + PPID.ToString());
                     cj = ControlJobManagement.Get(CJ_Command1.CJ_ObjID);
                     if (cj != null)
                     {
-                        ControlJob.OutSpec outS = new ControlJob.OutSpec();
-                        outS.SrcCarrierID
+                        outS = new ControlJob.OutSpec();
+                        outS.SrcCarrierID = PPID.ToString();
+                        lResult = axQGWrapper1.GetSV(GemSystemID.E87_SLOT_MAP, out GetFormat, out Value);
+                        
+                        j = int.Parse(Value.ToString());
+                        for (int i = 0; i < j; i++)
+                        {
+                            lResult = axQGWrapper1.GetSV(GemSystemID.E87_SLOT_MAP_1 + i, out GetFormat, out Value);
+                            outS.SrcMap.Add(int.Parse(Value.ToString()));
+                        }
+                        
                     }
                     else
                     {
                         logger.Error("CJ ID not exist. CJ:" + CJ_Command1.CJ_ObjID);
                     }
+                    break;
+
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_CARRIERID_OUT_DST_1:
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_CARRIERID_OUT_DST_MAX:
+                    logger.Debug(" ==>Receive CJ_Create, MtrlOutSpec Dest CarrierID:" + PPID.ToString());
+                    cj = ControlJobManagement.Get(CJ_Command1.CJ_ObjID);
+                    if (cj != null)
+                    {
+                      
+                        outS.DstCarrierID = PPID.ToString();
+                        lResult = axQGWrapper1.GetSV(GemSystemID.E87_SLOT_MAP, out GetFormat, out Value);
+
+                        j = int.Parse(Value.ToString());
+                        for (int i = 0; i < j; i++)
+                        {
+                            lResult = axQGWrapper1.GetSV(GemSystemID.E87_SLOT_MAP_1 + i, out GetFormat, out Value);
+                            outS.DstMap.Add(int.Parse(Value.ToString()));
+                        }
+                        cj.MtrlOutSpec.Add(outS);
+                    }
+                    else
+                    {
+                        logger.Error("CJ ID not exist. CJ:" + CJ_Command1.CJ_ObjID);
+                    }
+                    break;
+
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_CREATE_DATA_END:
+                    objTemp1 = ACKA_TRUE_SUCCESSFUL;
+                    objTemp2 = "";
+                    g_lOperationResult = axQGWrapper1.Command((int)QGACTIVEXLib.PP_TYPE.CMD_E94_REPLY_S14F10_CJ_CREATE_ACK, ref objTemp1, ref objTemp2);
+                    Process_E94_ControlJobStateModel(CJSM_CMD_ACCEPT_CJ_CREATE, CJ_Command1.CJ_ObjID);
+                    break;
+
+                // Receive 16F27 CJ Command area
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_COMMAND_START:
+                    logger.Debug(" ==>Receive CJ_Command: START," + PPID.ToString());
+                    CJ_Command1.CJ_ObjID = PPID.ToString();
+                    CJ_Command1.Command = CJ_Command_1_CJStart;
+                    objTemp1 = ACKA_TRUE_SUCCESSFUL;
+                    objTemp2 = "";
+                    g_lOperationResult = axQGWrapper1.Command((int)QGACTIVEXLib.PP_TYPE.CMD_E94_REPLY_S16F28_CJ_CAMMAND_ACK, ref objTemp1, ref objTemp2);
+                    Process_E94_ControlJobStateModel(CJ_Command1.Command, CJ_Command1.CJ_ObjID);
+                    break;
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_COMMAND_PAUSE:
+                    logger.Debug(" ==>Receive CJ_Command: PAUSE," + PPID.ToString());
+                    CJ_Command1.CJ_ObjID = PPID.ToString();
+                    CJ_Command1.Command = CJ_Command_2_CJPause;
+                    objTemp1 = ACKA_TRUE_SUCCESSFUL;
+                    objTemp2 = "";
+                    g_lOperationResult = axQGWrapper1.Command((int)QGACTIVEXLib.PP_TYPE.CMD_E94_REPLY_S16F28_CJ_CAMMAND_ACK, ref objTemp1, ref objTemp2);
+                    Process_E94_ControlJobStateModel(CJ_Command1.Command, CJ_Command1.CJ_ObjID);
+                    break;
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_COMMAND_RESUME:
+                    logger.Debug(" ==>Receive CJ_Command: RESUME," + PPID.ToString());
+                    CJ_Command1.CJ_ObjID = PPID.ToString();
+                    CJ_Command1.Command = CJ_Command_3_CJResume;
+                    objTemp1 = ACKA_TRUE_SUCCESSFUL;
+                    objTemp2 = "";
+                    g_lOperationResult = axQGWrapper1.Command((int)QGACTIVEXLib.PP_TYPE.CMD_E94_REPLY_S16F28_CJ_CAMMAND_ACK, ref objTemp1, ref objTemp2);
+                    Process_E94_ControlJobStateModel(CJ_Command1.Command, CJ_Command1.CJ_ObjID);
+                    break;
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_COMMAND_CANCEL:
+                    logger.Debug(" ==>Receive CJ_Command: CANCEL," + PPID.ToString());
+                    CJ_Command1.CJ_ObjID = PPID.ToString();
+                    CJ_Command1.Command = CJ_Command_4_CJCancel;
+                    objTemp1 = ACKA_TRUE_SUCCESSFUL;
+                    objTemp2 = "";
+                    g_lOperationResult = axQGWrapper1.Command((int)QGACTIVEXLib.PP_TYPE.CMD_E94_REPLY_S16F28_CJ_CAMMAND_ACK, ref objTemp1, ref objTemp2);
+                    Process_E94_ControlJobStateModel(CJ_Command1.Command, CJ_Command1.CJ_ObjID);
+                    break;
+
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_COMMAND_DESELECT:
+                    logger.Debug(" ==>Receive CJ_Command: DESELECT," + PPID.ToString());
+                    CJ_Command1.CJ_ObjID = PPID.ToString();
+                    CJ_Command1.Command = CJ_Command_5_CJDeselect;
+                    objTemp1 = ACKA_TRUE_SUCCESSFUL;
+                    objTemp2 = "";
+                    g_lOperationResult = axQGWrapper1.Command((int)QGACTIVEXLib.PP_TYPE.CMD_E94_REPLY_S16F28_CJ_CAMMAND_ACK, ref objTemp1, ref objTemp2);
+                    Process_E94_ControlJobStateModel(CJ_Command1.Command, CJ_Command1.CJ_ObjID);
+                    break;
+
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_COMMAND_STOP:
+                    logger.Debug(" ==>Receive CJ_Command: STOP," + PPID.ToString());
+                    CJ_Command1.CJ_ObjID = PPID.ToString();
+                    CJ_Command1.Command = CJ_Command_6_CJStop;
+                    objTemp1 = ACKA_TRUE_SUCCESSFUL;
+                    objTemp2 = "";
+                    g_lOperationResult = axQGWrapper1.Command((int)QGACTIVEXLib.PP_TYPE.CMD_E94_REPLY_S16F28_CJ_CAMMAND_ACK, ref objTemp1, ref objTemp2);
+                    Process_E94_ControlJobStateModel(CJ_Command1.Command, CJ_Command1.CJ_ObjID);
+                    break;
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_COMMAND_ABORT:
+                    logger.Debug(" ==>Receive CJ_Command: ABORT," + PPID.ToString());
+                    CJ_Command1.CJ_ObjID = PPID.ToString();
+                    CJ_Command1.Command = CJ_Command_7_CJAbort;
+                    objTemp1 = ACKA_TRUE_SUCCESSFUL;
+                    objTemp2 = "";
+                    g_lOperationResult = axQGWrapper1.Command((int)QGACTIVEXLib.PP_TYPE.CMD_E94_REPLY_S16F28_CJ_CAMMAND_ACK, ref objTemp1, ref objTemp2);
+                    Process_E94_ControlJobStateModel(CJ_Command1.Command, CJ_Command1.CJ_ObjID);
+                    break;
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_E94_CJ_COMMAND_HOQ:
+                    logger.Debug(" ==>Receive CJ_Command: HOQ," + PPID.ToString());
+                    CJ_Command1.CJ_ObjID = PPID.ToString();
+                    CJ_Command1.Command = CJ_Command_8_CJHOQ;
+                    objTemp1 = ACKA_TRUE_SUCCESSFUL;
+                    objTemp2 = "";
+                    g_lOperationResult = axQGWrapper1.Command((int)QGACTIVEXLib.PP_TYPE.CMD_E94_REPLY_S16F28_CJ_CAMMAND_ACK, ref objTemp1, ref objTemp2);
+                    Process_E94_ControlJobStateModel(CJ_Command1.Command, CJ_Command1.CJ_ObjID);
                     break;
             }
         }
@@ -1801,7 +1919,7 @@ namespace SECSInterface
         List<PJ_Command> PJ_Command_List = new List<PJ_Command>();
 
         // E94 data ---------------------------------------------------------
-
+        ControlJob.OutSpec outS;
 
         public struct CJ_Command
         {
