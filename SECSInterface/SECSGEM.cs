@@ -110,7 +110,7 @@ namespace SECSInterface
                 }
 
                 // E94
-                Process_E94_ControlJobStateModel(CJSM_CMD_RESET);
+                Process_E94_ControlJobStateModel(CJSM_CMD_RESET,"");
 
 
                 objTemp = (object)g_iE94_QueueAvailableSpace;
@@ -179,7 +179,7 @@ namespace SECSInterface
                     {
                         PJ_Data1.PJState = PJSM_NOT_EXIST;
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT11_STOPPING);
-                        Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
+                        //Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
                         E87_ReadyToUnload(cst.LocationID);
                     }
                     break;
@@ -194,7 +194,7 @@ namespace SECSInterface
                     {
                         PJ_Data1.PJState = PJSM_8_STOPPING;
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT11_STOPPING);
-                        Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
+                        //Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
                         Process_E87_CSM_CarrierAccessingStatus(CSM_CMD_CARRIER_PROCESS_STOPPED, cst.CarrierID);
                         E87_ReadyToUnload(cst.LocationID);
                     }
@@ -203,7 +203,7 @@ namespace SECSInterface
                         PJ_Data1.PJState = PJSM_9_ABORTING;
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT13_ABORTING);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT16_NO_STATE);
-                        Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
+                        //Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
                         Process_E87_CSM_CarrierAccessingStatus(CSM_CMD_CARRIER_PROCESS_STOPPED, cst.CarrierID);
                         E87_ReadyToUnload(cst.LocationID);
                     }
@@ -220,13 +220,13 @@ namespace SECSInterface
                     {
                         PJ_Data1.PJState = PJSM_4_PROCESS_COMPLETE;
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT7_NO_STATE);
-                        Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
+                        //Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
                     }
                     if (iCommand == PJSM_CMD_STOP)
                     {
                         PJ_Data1.PJState = PJSM_8_STOPPING;
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT11_STOPPING);
-                        Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
+                        //Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
                         Process_E87_CSM_CarrierAccessingStatus(CSM_CMD_CARRIER_PROCESS_STOPPED, cst.CarrierID);
                         E87_ReadyToUnload(cst.LocationID);
                     }
@@ -235,7 +235,7 @@ namespace SECSInterface
                         PJ_Data1.PJState = PJSM_9_ABORTING;
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT13_ABORTING);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT16_NO_STATE);
-                        Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
+                        //Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
                         Process_E87_CSM_CarrierAccessingStatus(CSM_CMD_CARRIER_PROCESS_STOPPED, cst.CarrierID);
                         E87_ReadyToUnload(cst.LocationID);
                     }
@@ -257,7 +257,7 @@ namespace SECSInterface
                     {
                         PJ_Data1.PJState = PJSM_8_STOPPING;
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT12_STOPPING);
-                        Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
+                        //Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
                         Process_E87_CSM_CarrierAccessingStatus(CSM_CMD_CARRIER_PROCESS_STOPPED, cst.CarrierID);
                         E87_ReadyToUnload(cst.LocationID);
                     }
@@ -266,7 +266,7 @@ namespace SECSInterface
                         PJ_Data1.PJState = PJSM_9_ABORTING;
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT15_ABORTING);
                         g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E40_CE_PJSM_SCT16_NO_STATE);
-                        Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
+                        //Process_E94_ControlJobStateModel(CJSM_CMD_PJ_COMPLETE);
                         Process_E87_CSM_CarrierAccessingStatus(CSM_CMD_CARRIER_PROCESS_STOPPED, cst.CarrierID);
                         E87_ReadyToUnload(cst.LocationID);
                     }
@@ -342,7 +342,7 @@ namespace SECSInterface
             foreach (ProcessJob pj in ProcessJobManagement.FindByCarrierID(cst.CarrierID))
             {
                 Process_E40_ProcessJobStateModel(PJSM_CMD_FOUP_REMOVED, pj.PJ_ObjID);
-                Process_E94_ControlJobStateModel(CJSM_CMD_CJ_DELETE);
+                //Process_E94_ControlJobStateModel(CJSM_CMD_CJ_DELETE);
             }
             g_iE40PJDataNumber = 0;
         }
@@ -838,7 +838,7 @@ namespace SECSInterface
                 {
                     CJ_Data1.CJState = CJSM_3_EXECUTING;
                     g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E94_CE_CJSM_SCT5_EXECUTING);
-                    Process_E40_ProcessJobStateModel(PJSM_CMD_SETTING_UP);
+                    //Process_E40_ProcessJobStateModel(PJSM_CMD_SETTING_UP);
                 }
                 else
                 {
@@ -860,7 +860,7 @@ namespace SECSInterface
 
                             CJ_Data1.CJState = CJSM_3_EXECUTING;
                             g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E94_CE_CJSM_SCT7_EXECUTING);
-                            Process_E40_ProcessJobStateModel(PJSM_CMD_SETTING_UP);
+                            //Process_E40_ProcessJobStateModel(PJSM_CMD_SETTING_UP);
                         }
                         break;
                     case CJSM_3_EXECUTING:
@@ -912,7 +912,7 @@ namespace SECSInterface
                         if (iCommand == CJSM_CMD_CJ_DELETE)
                         {
 
-                            Carrier_Data1.AccessingStatus = CARRIER_ACCESSING_STATUS_2_CARRIER_COMPLETE;
+                            //Carrier_Data1.AccessingStatus = CARRIER_ACCESSING_STATUS_2_CARRIER_COMPLETE;
                             CJ_Data1.CJState = CJSM_NOT_EXIST;
                             g_lOperationResult = axQGWrapper1.EventReportSend(EqpID.E94_CE_CJSM_SCT13_NO_STATE);
                             // DV port ID ,Location ID need update
@@ -1042,6 +1042,46 @@ namespace SECSInterface
             QGACTIVEXLib.SV_DATA_TYPE GetFormat;
             switch (MsgID)
             {
+                //Host Initiated PP transmission
+                case QGACTIVEXLib.PP_TYPE.PP_DELETE:
+                    logger.Debug("Process Program Delete. PPID = " + PPID.ToString());
+                    break;
+                case QGACTIVEXLib.PP_TYPE.PP_DOWNLOAD:
+                    logger.Debug("Process Program Download. PPID =" + PPID.ToString());
+                    break;
+                case QGACTIVEXLib.PP_TYPE.PP_UPLOAD:
+                    logger.Debug("Process Program Upload. PPID =" + PPID.ToString());
+                    break;
+                //Eqp Initiated PP transmission
+                case QGACTIVEXLib.PP_TYPE.PP_INQUIRE_GRANT:
+                    logger.Debug("Eqp Send Load Inquire. Grant= " + PPID.ToString());
+                    break;
+                case QGACTIVEXLib.PP_TYPE.PP_SEND_ACK:
+                    logger.Debug("Eqp Send PP. ACK= " + PPID.ToString());
+                    break;
+                case QGACTIVEXLib.PP_TYPE.PP_REQUEST_RESULT:
+                    logger.Debug("Eqp Request PP. Result = " + PPID.ToString());
+                    break;
+                //Host initiated send new EC
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_NEW_EC:
+                    logger.Debug("EC,Value = " + PPID.ToString());
+                    break;
+                //Eqp send event report (S6F11)
+                case QGACTIVEXLib.PP_TYPE.SEND_CE_RPT_NAME:
+                    logger.Debug(PPID.ToString());
+                    break;
+                //Eqp send alarm report (S5F11)
+                case QGACTIVEXLib.PP_TYPE.SEND_AL_RPT_TEXT:
+                    logger.Debug(PPID.ToString());
+                    break;
+
+                //Eqp report local PPID
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_LOCAL_PPID_DATA:
+                    logger.Debug("Local PPID:" + PPID.ToString());
+                    break;
+                case QGACTIVEXLib.PP_TYPE.RECEIVE_LOCAL_PPID_END:
+                    logger.Debug("Local PPID report end. number:" + PPID.ToString());
+                    break;
                 // E87 Area --------------------------------------------
 
                 //Receive S3F17 ProcessWithCarrier
