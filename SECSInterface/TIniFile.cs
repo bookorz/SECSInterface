@@ -4,10 +4,29 @@ using System.Text;
 using System.IO;
 using System.Collections; //ArrayList
 
-public class TIniFile
+public class TIniFile : IDisposable
 {
     private string m_Path;
     private TStringList TmpList;
+
+    private bool disposed = false;
+
+    public void Dispose()
+    {
+        Dispose(true);
+
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (this.disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+    }
 
     // IniFile Constructor.
     public TIniFile(string strIniPath)
