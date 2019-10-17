@@ -994,7 +994,7 @@ namespace SECSInterface
 
         public void On_Alarm_Happen(AlarmInfo Alarm)
         {
-            SendAlarmMsg(2^7,999, Alarm.EngDesc);
+            SendAlarmMsg((long)Math.Pow(2,7),999, Alarm.EngDesc);
         }
 
         
