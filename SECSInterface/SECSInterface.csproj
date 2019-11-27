@@ -51,18 +51,18 @@
   <ItemGroup>
     <Reference Include="AxInterop.QGACTIVEXLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\ITRI\QuickGEM_300mm 6.92F1\Sample Code\CSharp Sample 300mm\bin\x86\Debug\AxInterop.QGACTIVEXLib.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\ITRI\QuickGEM 6.92F1\Sample Code\CSharp Sample\bin\x86\Debug\AxInterop.QGACTIVEXLib.dll</HintPath>
     </Reference>
     <Reference Include="AxInterop.QSACTIVEXLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\ITRI\QuickGEM_300mm 6.92F1\Sample Code\CSharp Sample 300mm\bin\x86\Debug\AxInterop.QSACTIVEXLib.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\ITRI\QuickGEM 6.92F1\Sample Code\CSharp Sample\bin\x86\Debug\AxInterop.QSACTIVEXLib.dll</HintPath>
     </Reference>
     <Reference Include="Interop.QGACTIVEXLib">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\ITRI\QuickGEM_300mm 6.92F1\Sample Code\CSharp Sample 300mm\bin\x86\Debug\Interop.QGACTIVEXLib.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\ITRI\QuickGEM 6.92F1\Sample Code\CSharp Sample\bin\x86\Debug\Interop.QGACTIVEXLib.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="Interop.QSACTIVEXLib">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\ITRI\QuickGEM_300mm 6.92F1\Sample Code\CSharp Sample 300mm\bin\x86\Debug\Interop.QSACTIVEXLib.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\ITRI\QuickGEM 6.92F1\Sample Code\CSharp Sample\bin\x86\Debug\Interop.QSACTIVEXLib.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
     <Reference Include="log4net, Version=2.0.8.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
