@@ -297,7 +297,15 @@ namespace SECSInterface
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.ABORT_STOCKER, null);
                         break;
                     case "RESET_STOCKER":
-                        _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RESET_STOCKER, null);
+                        QGACTIVEXLib.SV_DATA_TYPE GetFormat;
+                        object SvVal = null;
+
+                        axQGWrapper1.GetSV(SECS_DV.STOCKER_SOURCE, out GetFormat, out SvVal);
+                        param = new Dictionary<string, string>();
+                        param.Add("@Source", SvVal.ToString());
+                        axQGWrapper1.GetSV(SECS_DV.STOCKER_DESTINATION, out GetFormat, out SvVal);
+                        param.Add("@Destination", SvVal.ToString());
+                        _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RESET_STOCKER, param);
                         break;
                     case "OPEN_FOUP":
                         param = new Dictionary<string, string>();
@@ -867,6 +875,18 @@ namespace SECSInterface
                 case TaskFlowManagement.Command.RESUME_WTS:
                     ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "TRANSFERRING");
                     break;
+                case TaskFlowManagement.Command.RESET_STOCKER:
+                    ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "IDLE");
+                    break;
+                case TaskFlowManagement.Command.STOP_STOCKER:
+                    ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "STOPED");
+                    break;
+                case TaskFlowManagement.Command.RESUME_STOCKER:
+                    ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "TRANSFERRING");
+                    break;
+                case TaskFlowManagement.Command.ABORT_STOCKER:
+                    ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "RESET_REQUIRED");
+                    break;
                 case TaskFlowManagement.Command.WTSALIGNER_ALIGN:
                     ReportEvent(SECS_SV.ALIGNER_STATE, SECS_SV.ALIGNER_STATE_PREV, SECS_Event.ALIGNER_State_Change, "IDLE");
                     break;
@@ -905,7 +925,7 @@ namespace SECSInterface
                     }
                     break;
                 case TaskFlowManagement.Command.MOVE_FOUP:
-                    
+
                     if (Task.Params["@FromPosition"].Equals("ELPT1"))
                     {
                         ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_LOAD");
@@ -955,6 +975,9 @@ namespace SECSInterface
             ReplyAck(Hack.Command_has_been_performed_later, sysByte);
             switch (Task.TaskName)
             {
+                case TaskFlowManagement.Command.RESET_STOCKER:
+                    ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "RESETTING");
+                    break;
                 case TaskFlowManagement.Command.RESET_WTS:
                     ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "RESETTING");
                     break;
@@ -969,6 +992,8 @@ namespace SECSInterface
                     ReportEvent(SECS_SV.ALIGNER_STATE, SECS_SV.ALIGNER_STATE_PREV, SECS_Event.ALIGNER_State_Change, "OPERATING");
                     break;
                 case TaskFlowManagement.Command.MOVE_FOUP:
+                    ReportEvent(SECS_DV.STOCKER_SOURCE, SECS_DV.STOCKER_SOURCE_PREV, SECS_Event.Stocker_Source_Change, Task.Params["@FromPosition"]);
+                    ReportEvent(SECS_DV.STOCKER_DESTINATION, SECS_DV.STOCKER_DESTINATION_PREV, SECS_Event.Stocker_Destination_Change, Task.Params["@ToPosition"]);
                     ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "TRANSFERRING");
                     if (Task.Params["@ToPosition"].Equals("ILPT1"))
                     {
@@ -1204,6 +1229,36 @@ namespace SECSInterface
                                 ReportEvent(SECS_DV.ELPT2_FOUP_ID, SECS_DV.ELPT2_FOUP_ID_PREV, SECS_Event.ELPT2_ID_Available, Msg.Value);
                             }
                             break;
+                        case Transaction.Command.ELPT.MoveOut:
+                            if (Node.Name.Equals("ELPT1"))
+                            {
+                                if (IO_State.ContainsKey("ELPT1-Place1") && IO_State.ContainsKey("ELPT1-Place2") && IO_State.ContainsKey("ELPT1-Place3") && IO_State.ContainsKey("ELPT1-Present") && IO_State.ContainsKey("ELPT1-R-POS-Unclamp") && IO_State.ContainsKey("ELPT1-L-POS-Unclamp"))
+                                {
+                                    if (IO_State["ELPT1-Place1"].Equals("1") && IO_State["ELPT1-Place2"].Equals("1") && IO_State["ELPT1-Place3"].Equals("1") && IO_State["ELPT1-Present"].Equals("1") && IO_State["ELPT1-R-POS-Unclamp"].Equals("1") && IO_State["ELPT1-L-POS-Unclamp"].Equals("1"))
+                                    {
+                                        ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_UNLOAD");
+                                    }
+                                    else if (IO_State["ELPT1-Place1"].Equals("0") && IO_State["ELPT1-Place2"].Equals("0") && IO_State["ELPT1-Place3"].Equals("0") && IO_State["ELPT1-Present"].Equals("1") && IO_State["ELPT1-R-POS-Unclamp"].Equals("1") && IO_State["ELPT1-L-POS-Unclamp"].Equals("1"))
+                                    {
+                                        ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_LOAD");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (IO_State.ContainsKey("ELPT2-Place1") && IO_State.ContainsKey("ELPT2-Place2") && IO_State.ContainsKey("ELPT2-Place3") && IO_State.ContainsKey("ELPT1-Present") && IO_State.ContainsKey("ELPT2-R-POS-Unclamp") && IO_State.ContainsKey("ELPT2-L-POS-Unclamp"))
+                                {
+                                    if (IO_State["ELPT2-Place1"].Equals("1") && IO_State["ELPT2-Place2"].Equals("1") && IO_State["ELPT2-Place3"].Equals("1") && IO_State["ELPT1-Present"].Equals("1") && IO_State["ELPT2-R-POS-Unclamp"].Equals("1") && IO_State["ELPT2-L-POS-Unclamp"].Equals("1"))
+                                    {
+                                        ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_UNLOAD");
+                                    }
+                                    else if (IO_State["ELPT2-Place1"].Equals("0") && IO_State["ELPT2-Place2"].Equals("0") && IO_State["ELPT2-Place3"].Equals("0") && IO_State["ELPT1-Present"].Equals("1") && IO_State["ELPT2-R-POS-Unclamp"].Equals("1") && IO_State["ELPT2-L-POS-Unclamp"].Equals("1"))
+                                    {
+                                        ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_LOAD");
+                                    }
+                                }
+                            }
+                            break;
                     }
                     break;
                 case "ILPT":
@@ -1297,10 +1352,13 @@ namespace SECSInterface
             QGACTIVEXLib.SV_DATA_TYPE GetFormat;
             object SvVal = null;
             //取得目前狀態
-            axQGWrapper1.GetSV(State, out GetFormat, out SvVal);
-            if (SvVal.ToString().Equals(NewState))
-            {//狀態沒變，不發事件
-                return;
+            lock (this)
+            {
+                axQGWrapper1.GetSV(State, out GetFormat, out SvVal);
+                if (SvVal.ToString().Equals(NewState))
+                {//狀態沒變，不發事件
+                    return;
+                }
             }
             //更新SV
             objTemp = (object)NewState;//PTZ_STATE
@@ -1525,12 +1583,12 @@ namespace SECSInterface
                             }
                             if (chk)
                             {
-                                param.Add("@Target", "ELPT1");
-                                _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.CLAMP_ELPT, param);
+                                //param.Add("@Target", "ELPT1");
+                                //_Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.CLAMP_ELPT, param);
                             }
                             else
                             {
-                                ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_LOAD");
+                                //ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_LOAD");
                             }
                             break;
                         case "ELPT2-Place1":
@@ -1549,7 +1607,7 @@ namespace SECSInterface
                             }
                             else
                             {
-                                ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_LOAD");
+                                //ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_LOAD");
                             }
                             break;
 
