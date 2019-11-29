@@ -408,15 +408,24 @@ namespace SECSInterface
             }
             else if (lMsgID == QSACTIVEXLib.EVENT_ID.QS_EVENT_CONNECTED)
             {
+                ConnStatus = "CONNECTED";
                 _Report.On_Message_Log("SECS", "CONNECTED");
             }
             else if (lMsgID == QSACTIVEXLib.EVENT_ID.QS_EVENT_DISCONNECTED)
             {
-                _Report.On_Message_Log("SECS", "DISCONNECTED");
+                if (ConnStatus == "CONNECTED")
+                {
+                    _Report.On_Message_Log("SECS", "DISCONNECTED");
+                }
+                if (ConnStatus != "CONNECTING")
+                {
+                    ConnStatus = "CONNECTING";
+                    _Report.On_Message_Log("SECS", "CONNECTING");
+                }
                 axQSWrapper1.Start();
             }
         }
-
+        string ConnStatus = "";
         private string ShowSECSIIMessage(object myRawData)
         {
             int[] myStack = new int[10];
@@ -875,6 +884,9 @@ namespace SECSInterface
                 case TaskFlowManagement.Command.RESUME_WTS:
                     ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "TRANSFERRING");
                     break;
+                case TaskFlowManagement.Command.ABORT_WTS:
+                    ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "RESET_REQUIRED");
+                    break;
                 case TaskFlowManagement.Command.RESET_STOCKER:
                     ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "IDLE");
                     break;
@@ -1046,9 +1058,7 @@ namespace SECSInterface
             //ReplyAck(Hack.Cannot_perform_now, Convert.ToInt32(Task.Id));
             switch (Task.TaskName)
             {
-                case TaskFlowManagement.Command.ABORT_WTS:
-                    ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "RESET_REQUIRED");
-                    break;
+               
                 case TaskFlowManagement.Command.RESET_WTS:
                 case TaskFlowManagement.Command.RESUME_WTS:
                 case TaskFlowManagement.Command.STOP_WTS:
