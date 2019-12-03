@@ -97,11 +97,13 @@ namespace SECSInterface
                 objVal = "SofRev";
                 lResult = axQGWrapper1.UpdateSV((int)GemSystemID.GEM_SOFTREV, ref objVal);
 
+                ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "RESET_REQUIRED");
+                ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "RESET_REQUIRED");
                 //*********************************************************************************************
 
                 state = axQGWrapper1.EnableComm();
                 state = axQSWrapper1.Start();
-
+               
             }
             catch (Exception ex)
             {
@@ -112,7 +114,7 @@ namespace SECSInterface
         }
 
 
-
+       
         public bool OnlieReq()
         {
             string path;
@@ -280,10 +282,89 @@ namespace SECSInterface
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.FOUP_ID, param);
                         break;
                     case "MOVE_FOUP":
+
+
                         param = new Dictionary<string, string>();
                         param.Add("@Target", "FOUP_ROBOT");
                         param.Add("@FromPosition", remoteCmd.GetCPValue("SOURCE").Replace("_", ""));
                         param.Add("@ToPosition", remoteCmd.GetCPValue("DESTINATION").Replace("_", ""));
+                        //來源與目的地同型態
+                        if ((param["@FromPosition"].Contains("ILPT") && param["@ToPosition"].Contains("ILPT")) || (param["@FromPosition"].Contains("ELPT") && param["@ToPosition"].Contains("ELPT")))
+                        {
+                            ReplyAck(Hack.At_least_one_parameter_is_invalid, ulSystemBytes);
+                            return;
+                        }
+                        //參數不在列表清單中
+                        if (_Report.GetNode(param["@FromPosition"]) == null || _Report.GetNode(param["@ToPosition"]) == null)
+                        {
+                            ReplyAck(Hack.At_least_one_parameter_is_invalid, ulSystemBytes);
+                            return;
+                        }
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("ALARM"))
+                        {
+                            ReplyAck(Hack.Stocker_Reset_Required, ulSystemBytes);
+                            return;
+                        }
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("OFFLINE"))
+                        {
+                            ReplyAck(Hack.Stocker_is_Offline, ulSystemBytes);
+                            return;
+                        }
+                        if (!GetSv(SECS_SV.STOCKER_STATE).Equals("IDLE"))
+                        {
+                            ReplyAck(Hack.Stocker_Not_Idle, ulSystemBytes);
+                            return;
+                        }
+                        if (!_Report.GetNode(param["@FromPosition"]).Enable)
+                        {
+                            switch (_Report.GetNode(param["@FromPosition"]).Name)
+                            {
+                                case "ELPT1":
+                                    ReplyAck(Hack.ELPT1_is_Offline, ulSystemBytes);
+                                    break;
+                                case "ELPT2":
+                                    ReplyAck(Hack.ELPT2_is_Offline, ulSystemBytes);
+                                    break;
+                                case "ILPT1":
+                                    ReplyAck(Hack.ILPT1_is_Offline, ulSystemBytes);
+                                    break;
+                                case "ILPT2":
+                                    ReplyAck(Hack.ILPT2_is_Offline, ulSystemBytes);
+                                    break;
+                            }
+
+                            return;
+                        }
+                        if (!_Report.GetNode(param["@ToPosition"]).Enable)
+                        {
+                            switch (_Report.GetNode(param["@ToPosition"]).Name)
+                            {
+                                case "ELPT1":
+                                    ReplyAck(Hack.ELPT1_is_Offline, ulSystemBytes);
+                                    break;
+                                case "ELPT2":
+                                    ReplyAck(Hack.ELPT2_is_Offline, ulSystemBytes);
+                                    break;
+                                case "ILPT1":
+                                    ReplyAck(Hack.ILPT1_is_Offline, ulSystemBytes);
+                                    break;
+                                case "ILPT2":
+                                    ReplyAck(Hack.ILPT2_is_Offline, ulSystemBytes);
+                                    break;
+                            }
+
+                            return;
+                        }
+                        if (!_Report.GetNode("SHELF").Status[param["@FromPosition"]].Equals("1"))
+                        {
+                            ReplyAck(Hack.Stocker_Source_Empty, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode("SHELF").Status[param["@ToPosition"]].Equals("1"))
+                        {
+                            ReplyAck(Hack.Stocker_Destination_Full, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.MOVE_FOUP, param);
 
                         break;
@@ -312,12 +393,72 @@ namespace SECSInterface
                         param.Add("@Target", remoteCmd.GetCPValue("SOURCE"));
                         param.Add("@Val2", remoteCmd.GetCPValue("SOURCE").Equals("ILPT1") ? "1" : "2");
                         param.Add("@Value", "1");
+
+                        //參數不在列表清單中
+                        if (_Report.GetNode(param["@Target"]) == null)
+                        {
+                            ReplyAck(Hack.At_least_one_parameter_is_invalid, ulSystemBytes);
+                            return;
+                        }
+                        if (!_Report.GetNode(param["@Target"]).Enable)
+                        {
+                            switch (_Report.GetNode(param["@Target"]).Name)
+                            {
+                                case "ILPT1":
+                                    ReplyAck(Hack.ILPT1_is_Offline, ulSystemBytes);
+                                    break;
+                                case "ILPT2":
+                                    ReplyAck(Hack.ILPT2_is_Offline, ulSystemBytes);
+                                    break;
+                            }
+                            return;
+                        }
+
+                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT1") && !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("ID_CONFIRMATION"))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_Empty, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT2") && !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("ID_CONFIRMATION"))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_Empty, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.OPEN_FOUP, param);
                         break;
                     case "CLOSE_FOUP":
                         param = new Dictionary<string, string>();
                         param.Add("@Target", remoteCmd.GetCPValue("SOURCE"));
                         param.Add("@Val2", remoteCmd.GetCPValue("SOURCE").Equals("ILPT1") ? "1" : "2");
+                        //參數不在列表清單中
+                        if (_Report.GetNode(param["@Target"]) == null)
+                        {
+                            ReplyAck(Hack.At_least_one_parameter_is_invalid, ulSystemBytes);
+                            return;
+                        }
+                        if (!_Report.GetNode(param["@Target"]).Enable)
+                        {
+                            switch (_Report.GetNode(param["@Target"]).Name)
+                            {
+                                case "ILPT1":
+                                    ReplyAck(Hack.ILPT1_is_Offline, ulSystemBytes);
+                                    break;
+                                case "ILPT2":
+                                    ReplyAck(Hack.ILPT2_is_Offline, ulSystemBytes);
+                                    break;
+                            }
+                            return;
+                        }
+                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT2") && (!GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.CLOSE_FOUP, param);
                         break;
                     case "TRANSFER_WTS":
@@ -325,6 +466,84 @@ namespace SECSInterface
                         param.Add("@FromPosition", remoteCmd.GetCPValue("SOURCE"));
                         param.Add("@ToPosition", remoteCmd.GetCPValue("DESTINATION"));
                         param.Add("@Mode", remoteCmd.GetCPValue("PATH").Equals("DIRTY") ? "1" : "0");
+
+                        //參數不在列表清單中
+                        if (_Report.GetNode(param["@FromPosition"]) == null || _Report.GetNode(param["@ToPosition"]) == null)
+                        {
+                            ReplyAck(Hack.At_least_one_parameter_is_invalid, ulSystemBytes);
+                            return;
+                        }
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM"))
+                        {
+                            ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
+                            return;
+                        }
+                        if (!GetSv(SECS_SV.WTS_STATE).Equals("IDLE"))
+                        {
+                            ReplyAck(Hack.WTS_is_not_Idle, ulSystemBytes);
+                            return;
+                        }
+                        if (!_Report.GetNode(param["@FromPosition"]).Enable)
+                        {
+                            switch (_Report.GetNode(param["@FromPosition"]).Name)
+                            {
+                                case "ILPT1":
+                                    ReplyAck(Hack.ILPT1_is_Offline, ulSystemBytes);
+                                    break;
+                                case "ILPT2":
+                                    ReplyAck(Hack.ILPT2_is_Offline, ulSystemBytes);
+                                    break;
+                            }
+                            return;
+                        }
+                        if (!_Report.GetNode(param["@ToPosition"]).Enable)
+                        {
+                            switch (_Report.GetNode(param["@ToPosition"]).Name)
+                            {
+                                case "ILPT1":
+                                    ReplyAck(Hack.ILPT1_is_Offline, ulSystemBytes);
+                                    break;
+                                case "ILPT2":
+                                    ReplyAck(Hack.ILPT2_is_Offline, ulSystemBytes);
+                                    break;
+                            }
+                            return;
+                        }
+                        if (_Report.GetNode(param["@FromPosition"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode(param["@FromPosition"]).Name.Equals("ILPT2") && (!GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode(param["@ToPosition"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode(param["@ToPosition"]).Name.Equals("ILPT2") && (!GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode(param["@FromPosition"]).Name.Equals("ILPT1") && (GetSv(SECS_DV.ILPT1_MAP).Equals("0000000000000000000000000")))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_Empty, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode(param["@FromPosition"]).Name.Equals("ILPT2") && (GetSv(SECS_DV.ILPT2_MAP).Equals("0000000000000000000000000")))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_Empty, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode(param["@ToPosition"]).Name.Equals("CTU") && _Report.GetNode(param["@ToPosition"]).R_Presence)
+                        {
+                            ReplyAck(Hack.WTS_CTU_Full, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.TRANSFER_WTS, param);
                         break;
                     case "STOP_WTS":
@@ -370,6 +589,47 @@ namespace SECSInterface
                                 break;
                         }
                         param.Add("@Station", tmp);
+                        //參數不在列表清單中
+                        if (!param["Way"].Equals("IN") || !param["Way"].Equals("OUT"))
+                        {
+                            ReplyAck(Hack.At_least_one_parameter_is_invalid, ulSystemBytes);
+                            return;
+                        }
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM"))
+                        {
+                            ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
+                            return;
+                        }
+                        if (!GetSv(SECS_SV.WTS_STATE).Equals("IDLE"))
+                        {
+                            ReplyAck(Hack.WTS_is_not_Idle, ulSystemBytes);
+                            return;
+                        }
+                        if (!GetSv(SECS_SV.PTZ_STATE).Equals("IDLE"))
+                        {
+                            ReplyAck(Hack.WTS_Incorrect_PTZ_State, ulSystemBytes);
+                            return;
+                        }
+                        if (param["Way"].Equals("IN") && GetSv(SECS_SV.PROCESS_SUBSTRATE_STATE).Equals("ODDEVEN"))
+                        {
+                            ReplyAck(Hack.WTS_PTZ_Slot_Full, ulSystemBytes);
+                            return;
+                        }
+                        if (param["Way"].Equals("IN") && !_Report.GetNode("CTU").R_Presence)
+                        {
+                            ReplyAck(Hack.WTS_CTU_Empty, ulSystemBytes);
+                            return;
+                        }
+                        if (param["Way"].Equals("OUT") && GetSv(SECS_SV.PROCESS_SUBSTRATE_STATE).Equals("EMPTY"))
+                        {
+                            ReplyAck(Hack.WTS_PTZ_Slot_Empty, ulSystemBytes);
+                            return;
+                        }
+                        if (param["Way"].Equals("OUT") && _Report.GetNode("CTU").R_Presence)
+                        {
+                            ReplyAck(Hack.WTS_CTU_Full, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.TRANSFER_PTZ, param);
                         break;
                     case "NOTCH_ALIGN":
@@ -736,7 +996,26 @@ namespace SECSInterface
             Command_has_been_performed = 0,
             Command_does_not_exist = 1,
             Cannot_perform_now = 2,
+            At_least_one_parameter_is_invalid = 3,
             Command_has_been_performed_later = 4,
+            Stocker_is_Offline=65,
+            ELPT1_is_Offline=66,
+            ELPT2_is_Offline = 67,
+            ILPT1_is_Offline = 68,
+            ILPT2_is_Offline = 69,
+            WTS_is_not_Idle=70,
+            WTS_Reset_is_Required =72,
+            WTS_ILPT_Door_is_not_Open =74,
+            WTS_Incorrect_PTZ_State=75,
+            WTS_ILPT_Empty =78,
+            WTS_PTZ_Slot_Empty=81,
+            WTS_PTZ_Slot_Full =82,
+            Stocker_Not_Idle =84,
+            Stocker_Reset_Required =86,
+            Stocker_Source_Empty=93,
+            Stocker_Destination_Full=94,
+            WTS_CTU_Full=100,
+            WTS_CTU_Empty=101
         }
         class RemoteCommand
         {
@@ -1313,10 +1592,13 @@ namespace SECSInterface
                         case Transaction.Command.PTZ.Home:
                             string MappingState = "";
                             var odd = from job in Node.JobList.Values.ToList()
-                                      where job.MapFlag && Convert.ToInt32(job.Slot) % 2 != 0
+                                      where job.MapFlag && !job.ErrPosition && Convert.ToInt32(job.Slot) % 2 != 0
                                       select job;
                             var even = from job in Node.JobList.Values.ToList()
-                                       where job.MapFlag && Convert.ToInt32(job.Slot) % 2 == 0
+                                       where job.MapFlag && !job.ErrPosition && Convert.ToInt32(job.Slot) % 2 == 0
+                                       select job;
+                            var err = from job in Node.JobList.Values.ToList()
+                                       where job.ErrPosition
                                        select job;
                             if (odd.Count() != 0 && even.Count() != 0)
                             {
@@ -1329,6 +1611,10 @@ namespace SECSInterface
                             else if (even.Count() != 0)
                             {
                                 MappingState = "EVEN";
+                            }
+                            else if (err.Count() != 0)
+                            {
+                                MappingState = "PRESENT_NOT_MAPPED";
                             }
                             else
                             {
@@ -1355,7 +1641,17 @@ namespace SECSInterface
             }
 
         }
-
+        private string GetSv(int Sv)
+        {
+            QGACTIVEXLib.SV_DATA_TYPE GetFormat;
+            object SvVal = null;
+            //取得目前狀態
+            lock (this)
+            {
+                axQGWrapper1.GetSV(Sv, out GetFormat, out SvVal);
+                return SvVal.ToString();
+            }
+        }
         private void ReportEvent(int State, int State_Prev, int Event, string NewState)
         {
             object objTemp;
@@ -1424,7 +1720,11 @@ namespace SECSInterface
 
                     switch (IO_Name)
                     {
+                        case "CTU-Present":
+                            NodeManagement.Get("CTU").R_Presence = IO_Value.Equals("1") ? true : false;
+                            break;
                         case "PTZ-Present":
+                            NodeManagement.Get("PTZ").R_Presence = IO_Value.Equals("1") ? true : false;
                             if (IO_Value.Equals("0"))
                             {
                                 ReportEvent(SECS_SV.PROCESS_SUBSTRATE_STATE, SECS_SV.PROCESS_SUBSTRATE_STATE_PREV, SECS_Event.Process_Substrate_State_Change, "PRESENT_NOT_MAPPED");
@@ -1589,6 +1889,11 @@ namespace SECSInterface
                                 if (IO_State["ELPT1-Place1"].Equals("1") && IO_State["ELPT1-Place2"].Equals("1") && IO_State["ELPT1-Place3"].Equals("1"))
                                 {
                                     chk = true;
+                                    NodeManagement.Get("ELPT1").R_Presence = true;
+                                }
+                                else
+                                {
+                                    NodeManagement.Get("ELPT1").R_Presence = false;
                                 }
                             }
                             if (chk)
@@ -1609,6 +1914,11 @@ namespace SECSInterface
                                 if (IO_State["ELPT2-Place1"].Equals("1") && IO_State["ELPT2-Place2"].Equals("1") && IO_State["ELPT2-Place3"].Equals("1"))
                                 {
                                     chk = true;
+                                    NodeManagement.Get("ELPT1").R_Presence = true;
+                                }
+                                else
+                                {
+                                    NodeManagement.Get("ELPT1").R_Presence = false;
                                 }
                             }
                             if (chk)
@@ -1624,6 +1934,13 @@ namespace SECSInterface
                     }
                 }
             }
+        }
+        bool NodeDataAvailable = false;
+        Node ReqNode = null;
+        private Node GetNode(string Name)
+        {
+
+            return ReqNode;
         }
 
         public void On_Node_State_Changed(Node Node, string Status)
@@ -1656,9 +1973,9 @@ namespace SECSInterface
 
         }
 
-        public void On_Alarm_Happen(AlarmInfo Alarm)
+        public void On_Alarm_Happen(TransferControl.Management.AlarmManagement.AlarmInfo Alarm)
         {
-            SendAlarmMsg((long)Math.Pow(2, 7), 999, Alarm.EngDesc);
+            SendAlarmMsg((long)Math.Pow(2, 7),Convert.ToInt64(Alarm.ALID.Equals("")?"0": Alarm.ALID), Alarm.ALTX);
         }
 
 
@@ -1677,6 +1994,12 @@ namespace SECSInterface
         {
 
         }
+
+        Node IUserInterfaceReport.GetNode(string Name)
+        {
+            throw new NotImplementedException();
+        }
+
         static class SECS_Event
         {
             public const int Stocker_State_Change = 5001;
