@@ -99,11 +99,20 @@ namespace SECSInterface
 
                 ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "RESET_REQUIRED");
                 ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "RESET_REQUIRED");
+                ReportEvent(SECS_DV.ELPT1_FOUP_ID, SECS_DV.ELPT1_FOUP_ID_PREV, SECS_Event.ELPT1_ID_Available, "UNKNOWN");
+                ReportEvent(SECS_DV.ELPT2_FOUP_ID, SECS_DV.ELPT2_FOUP_ID_PREV, SECS_Event.ELPT2_ID_Available, "UNKNOWN");
+                ReportEvent(SECS_DV.ILPT1_MAP, SECS_DV.ILPT1_MAP_PREV, SECS_Event.ILPT1_Wafer_Map_Available, "UNKNOWN");
+                ReportEvent(SECS_DV.ILPT2_MAP, SECS_DV.ILPT2_MAP_PREV, SECS_Event.ILPT2_Wafer_Map_Available, "UNKNOWN");
+                ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "UNKNOWN");
+                ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "UNKNOWN");
+                ReportEvent(SECS_DV.PTZ_MAP, SECS_DV.PTZ_MAP_PREV, SECS_Event.PTZ_Map_Available, "UNKNOWN");
+                ReportEvent(SECS_DV.STOCKER_SOURCE, SECS_DV.STOCKER_SOURCE_PREV, SECS_Event.Stocker_Source_Change, "UNKNOWN");
+                ReportEvent(SECS_DV.STOCKER_DESTINATION, SECS_DV.STOCKER_DESTINATION_PREV, SECS_Event.Stocker_Destination_Change, "UNKNOWN");
                 //*********************************************************************************************
 
                 state = axQGWrapper1.EnableComm();
                 state = axQSWrapper1.Start();
-               
+
             }
             catch (Exception ex)
             {
@@ -114,7 +123,7 @@ namespace SECSInterface
         }
 
 
-       
+
         public bool OnlieReq()
         {
             string path;
@@ -386,6 +395,12 @@ namespace SECSInterface
                         param.Add("@Source", SvVal.ToString());
                         axQGWrapper1.GetSV(SECS_DV.STOCKER_DESTINATION, out GetFormat, out SvVal);
                         param.Add("@Destination", SvVal.ToString());
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("RESETTING"))
+                        {
+                            ReplyAck(Hack.WTS_is_not_Idle, ulSystemBytes);
+                            return;
+                        }
+
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RESET_STOCKER, param);
                         break;
                     case "OPEN_FOUP":
@@ -414,12 +429,12 @@ namespace SECSInterface
                             return;
                         }
 
-                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT1") && !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("ID_CONFIRMATION"))
+                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("ID_CONFIRMATION") && !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("READY_TO_UNLOAD")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Empty, ulSystemBytes);
                             return;
                         }
-                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT2") && !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("ID_CONFIRMATION"))
+                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT2") && (!GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("ID_CONFIRMATION") && !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("READY_TO_UNLOAD")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Empty, ulSystemBytes);
                             return;
@@ -449,12 +464,12 @@ namespace SECSInterface
                             }
                             return;
                         }
-                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("PREMAP_CONFIRM") && !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
                             return;
                         }
-                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT2") && (!GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT2") && (!GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("PREMAP_CONFIRM") && !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
                             return;
@@ -509,22 +524,22 @@ namespace SECSInterface
                             }
                             return;
                         }
-                        if (_Report.GetNode(param["@FromPosition"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        if (_Report.GetNode(param["@FromPosition"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("PREMAP_CONFIRM") && !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
                             return;
                         }
-                        if (_Report.GetNode(param["@FromPosition"]).Name.Equals("ILPT2") && (!GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        if (_Report.GetNode(param["@FromPosition"]).Name.Equals("ILPT2") && (!GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("PREMAP_CONFIRM") && !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
                             return;
                         }
-                        if (_Report.GetNode(param["@ToPosition"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        if (_Report.GetNode(param["@ToPosition"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("PREMAP_CONFIRM") && !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
                             return;
                         }
-                        if (_Report.GetNode(param["@ToPosition"]).Name.Equals("ILPT2") && (!GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("PREMAP_CONFIRM") || !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
+                        if (_Report.GetNode(param["@ToPosition"]).Name.Equals("ILPT2") && (!GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("PREMAP_CONFIRM") && !GetSv(SECS_SV.ILPT2_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
                             return;
@@ -537,6 +552,11 @@ namespace SECSInterface
                         if (_Report.GetNode(param["@FromPosition"]).Name.Equals("ILPT2") && (GetSv(SECS_DV.ILPT2_MAP).Equals("0000000000000000000000000")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Empty, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode(param["@FromPosition"]).Name.Equals("CTU") && !_Report.GetNode(param["@FromPosition"]).R_Presence)
+                        {
+                            ReplyAck(Hack.WTS_CTU_Empty, ulSystemBytes);
                             return;
                         }
                         if (_Report.GetNode(param["@ToPosition"]).Name.Equals("CTU") && _Report.GetNode(param["@ToPosition"]).R_Presence)
@@ -556,6 +576,11 @@ namespace SECSInterface
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.ABORT_WTS, null);
                         break;
                     case "RESET_WTS":
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("RESETTING"))
+                        {
+                            ReplyAck(Hack.Stocker_Not_Idle, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RESET_WTS, null);
                         break;
                     case "TRANSFER_PTZ":
@@ -590,7 +615,7 @@ namespace SECSInterface
                         }
                         param.Add("@Station", tmp);
                         //參數不在列表清單中
-                        if (!param["Way"].Equals("IN") || !param["Way"].Equals("OUT"))
+                        if (!param["@Way"].Equals("IN") && !param["@Way"].Equals("OUT"))
                         {
                             ReplyAck(Hack.At_least_one_parameter_is_invalid, ulSystemBytes);
                             return;
@@ -610,22 +635,22 @@ namespace SECSInterface
                             ReplyAck(Hack.WTS_Incorrect_PTZ_State, ulSystemBytes);
                             return;
                         }
-                        if (param["Way"].Equals("IN") && GetSv(SECS_SV.PROCESS_SUBSTRATE_STATE).Equals("ODDEVEN"))
+                        if (param["@Way"].Equals("IN") && GetSv(SECS_SV.PROCESS_SUBSTRATE_STATE).Equals("ODDEVEN"))
                         {
                             ReplyAck(Hack.WTS_PTZ_Slot_Full, ulSystemBytes);
                             return;
                         }
-                        if (param["Way"].Equals("IN") && !_Report.GetNode("CTU").R_Presence)
+                        if (param["@Way"].Equals("IN") && !_Report.GetNode("CTU").R_Presence)
                         {
                             ReplyAck(Hack.WTS_CTU_Empty, ulSystemBytes);
                             return;
                         }
-                        if (param["Way"].Equals("OUT") && GetSv(SECS_SV.PROCESS_SUBSTRATE_STATE).Equals("EMPTY"))
+                        if (param["@Way"].Equals("OUT") && GetSv(SECS_SV.PROCESS_SUBSTRATE_STATE).Equals("EMPTY"))
                         {
                             ReplyAck(Hack.WTS_PTZ_Slot_Empty, ulSystemBytes);
                             return;
                         }
-                        if (param["Way"].Equals("OUT") && _Report.GetNode("CTU").R_Presence)
+                        if (param["@Way"].Equals("OUT") && _Report.GetNode("CTU").R_Presence)
                         {
                             ReplyAck(Hack.WTS_CTU_Full, ulSystemBytes);
                             return;
@@ -998,24 +1023,24 @@ namespace SECSInterface
             Cannot_perform_now = 2,
             At_least_one_parameter_is_invalid = 3,
             Command_has_been_performed_later = 4,
-            Stocker_is_Offline=65,
-            ELPT1_is_Offline=66,
+            Stocker_is_Offline = 65,
+            ELPT1_is_Offline = 66,
             ELPT2_is_Offline = 67,
             ILPT1_is_Offline = 68,
             ILPT2_is_Offline = 69,
-            WTS_is_not_Idle=70,
-            WTS_Reset_is_Required =72,
-            WTS_ILPT_Door_is_not_Open =74,
-            WTS_Incorrect_PTZ_State=75,
-            WTS_ILPT_Empty =78,
-            WTS_PTZ_Slot_Empty=81,
-            WTS_PTZ_Slot_Full =82,
-            Stocker_Not_Idle =84,
-            Stocker_Reset_Required =86,
-            Stocker_Source_Empty=93,
-            Stocker_Destination_Full=94,
-            WTS_CTU_Full=100,
-            WTS_CTU_Empty=101
+            WTS_is_not_Idle = 70,
+            WTS_Reset_is_Required = 72,
+            WTS_ILPT_Door_is_not_Open = 74,
+            WTS_Incorrect_PTZ_State = 75,
+            WTS_ILPT_Empty = 78,
+            WTS_PTZ_Slot_Empty = 81,
+            WTS_PTZ_Slot_Full = 82,
+            Stocker_Not_Idle = 84,
+            Stocker_Reset_Required = 86,
+            Stocker_Source_Empty = 93,
+            Stocker_Destination_Full = 94,
+            WTS_CTU_Full = 100,
+            WTS_CTU_Empty = 101
         }
         class RemoteCommand
         {
@@ -1119,7 +1144,7 @@ namespace SECSInterface
         //*******************************************************************************************************************
         public void On_TaskJob_Finished(TaskFlowManagement.CurrentProcessTask Task)
         {
-
+            Node Shelf = null;
             switch (Task.TaskName)
             {
                 case TaskFlowManagement.Command.PORT_ACCESS_MODE:
@@ -1153,8 +1178,55 @@ namespace SECSInterface
                     ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "IDLE");
                     break;
                 case TaskFlowManagement.Command.RESET_WTS:
+
+                    Shelf = _Report.GetNode("SHELF");
+                    foreach (KeyValuePair<string, string> item in Shelf.Status)
+                    {
+                        switch (item.Key)
+                        {
+                            case "ILPT1":
+                                if (item.Value.Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "READY_TO_UNLOAD");
+                                }
+                                else
+                                {
+                                    ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "READY_TO_LOAD");
+                                }
+                                break;
+                            case "ILPT2":
+                                if (item.Value.Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "READY_TO_UNLOAD");
+                                }
+                                else
+                                {
+                                    ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "READY_TO_LOAD");
+                                }
+                                break;
+                        }
+                    }
+
+
+
+                    ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "IDLE");
+                    ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "IDLE");
+
+                    break;
                 case TaskFlowManagement.Command.TRANSFER_PTZ:
+                    ReportEvent(SECS_SV.PROCESS_SUBSTRATE_STATE, SECS_SV.PROCESS_SUBSTRATE_STATE_PREV, SECS_Event.Process_Substrate_State_Change, "PRESENT_NOT_MAPPED");
+                    ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "IDLE");
+                    ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "IDLE");
+                    break;
                 case TaskFlowManagement.Command.TRANSFER_WTS:
+                    if (Task.Params["@FromPosition"].Equals("ILPT1") || Task.Params["@ToPosition"].Equals("ILPT1"))
+                    {
+                        ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "READY_TO_UNLOAD");
+                    }
+                    if (Task.Params["@FromPosition"].Equals("ILPT2") || Task.Params["@ToPosition"].Equals("ILPT2"))
+                    {
+                        ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "READY_TO_UNLOAD");
+                    }
                     ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "IDLE");
                     break;
                 case TaskFlowManagement.Command.STOP_WTS:
@@ -1167,7 +1239,74 @@ namespace SECSInterface
                     ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "RESET_REQUIRED");
                     break;
                 case TaskFlowManagement.Command.RESET_STOCKER:
+
+                    Shelf = _Report.GetNode("SHELF");
+                    foreach (KeyValuePair<string, string> item in Shelf.Status)
+                    {
+                        switch (item.Key)
+                        {
+                            case "ILPT1":
+                                if (item.Value.Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "READY_TO_UNLOAD");
+                                }
+                                else
+                                {
+                                    ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "READY_TO_LOAD");
+                                }
+                                break;
+                            case "ILPT2":
+                                if (item.Value.Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "READY_TO_UNLOAD");
+                                }
+                                else
+                                {
+                                    ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "READY_TO_LOAD");
+                                }
+                                break;
+                            case "ELPT1":
+                                if (item.Value.Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_UNLOAD");
+                                }
+                                else
+                                {
+                                    ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_LOAD");
+                                }
+                                break;
+                            case "ELPT2":
+                                if (item.Value.Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_UNLOAD");
+                                }
+                                else
+                                {
+                                    ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_LOAD");
+                                }
+                                break;
+                            default:
+                                if (!item.Key.Equals("FOUP_ROBOT"))
+                                {
+                                    int OffSet = Convert.ToInt32(item.Key.Replace("SHELF", "")) - 1;
+                                    if (item.Value.Equals("1"))
+                                    {
+                                        ReportEvent(SECS_SV.SHELF_1_STATE + OffSet * 2, SECS_SV.SHELF_1_STATE_PREV + OffSet * 2, SECS_Event.Shelf_1_State_Change + OffSet * 2, "OCCUPIED");
+                                    }
+                                    else if (item.Value.Equals("0"))
+                                    {
+                                        ReportEvent(SECS_SV.SHELF_1_STATE + OffSet * 2, SECS_SV.SHELF_1_STATE_PREV + OffSet * 2, SECS_Event.Shelf_1_State_Change + OffSet * 2, "EMPTY");
+                                    }
+                                    else
+                                    {
+                                        ReportEvent(SECS_SV.SHELF_1_STATE + OffSet * 2, SECS_SV.SHELF_1_STATE_PREV + OffSet * 2, SECS_Event.Shelf_1_State_Change + OffSet * 2, "SENSOR_ERROR");
+                                    }
+                                }
+                                break;
+                        }
+                    }
                     ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "IDLE");
+
                     break;
                 case TaskFlowManagement.Command.STOP_STOCKER:
                     ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "STOPED");
@@ -1217,30 +1356,7 @@ namespace SECSInterface
                     break;
                 case TaskFlowManagement.Command.MOVE_FOUP:
 
-                    if (Task.Params["@FromPosition"].Equals("ELPT1"))
-                    {
-                        ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_LOAD");
-                    }
-                    if (Task.Params["@FromPosition"].Equals("ELPT2"))
-                    {
-                        ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_LOAD");
-                    }
-                    if (Task.Params["@FromPosition"].Equals("ILPT1"))
-                    {
-                        ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "READY_TO_LOAD");
-                    }
-                    if (Task.Params["@FromPosition"].Equals("ILPT2"))
-                    {
-                        ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "READY_TO_LOAD");
-                    }
-                    if (Task.Params["@ToPosition"].Equals("ELPT1"))
-                    {
-                        ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_UNLOAD");
-                    }
-                    if (Task.Params["@ToPosition"].Equals("ELPT2"))
-                    {
-                        ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_UNLOAD");
-                    }
+
                     if (Task.Params["@ToPosition"].Equals("ILPT1"))
                     {
                         ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "ID_CONFIRMATION");
@@ -1248,6 +1364,36 @@ namespace SECSInterface
                     if (Task.Params["@ToPosition"].Equals("ILPT2"))
                     {
                         ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "ID_CONFIRMATION");
+                    }
+                    if (Task.Params["@FromPosition"].Contains("ELPT") || Task.Params["@ToPosition"].Contains("ELPT"))
+                    {
+                        Shelf = _Report.GetNode("SHELF");
+                        if (Shelf.Status["ELPT1"].Equals("1") && (Task.Params["@FromPosition"].Equals("ELPT1") || Task.Params["@ToPosition"].Equals("ELPT1")))
+                        {
+                            ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_UNLOAD");
+                        }
+                        else if (Shelf.Status["ELPT1"].Equals("0") && (Task.Params["@FromPosition"].Equals("ELPT1") || Task.Params["@ToPosition"].Equals("ELPT1")))
+                        {
+                            ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_LOAD");
+                        }
+                        if (Shelf.Status["ELPT2"].Equals("1") && (Task.Params["@FromPosition"].Equals("ELPT2") || Task.Params["@ToPosition"].Equals("ELPT2")))
+                        {
+                            ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_UNLOAD");
+                        }
+                        else if (Shelf.Status["ELPT2"].Equals("0") && (Task.Params["@FromPosition"].Equals("ELPT2") || Task.Params["@ToPosition"].Equals("ELPT2")))
+                        {
+                            ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_LOAD");
+                        }
+                    }
+                    if (Task.Params["@FromPosition"].Contains("SHELF"))
+                    {
+                        int Offset = Convert.ToInt32(Task.Params["@FromPosition"].Replace("SHELF", "")) - 1;
+                        ReportEvent(SECS_SV.SHELF_1_STATE + Offset * 2, SECS_SV.SHELF_1_STATE_PREV + Offset * 2, SECS_Event.Shelf_1_State_Change + Offset * 2, "EMPTY");
+                    }
+                    if (Task.Params["@ToPosition"].Contains("SHELF"))
+                    {
+                        int Offset = Convert.ToInt32(Task.Params["@ToPosition"].Replace("SHELF", "")) - 1;
+                        ReportEvent(SECS_SV.SHELF_1_STATE + Offset * 2, SECS_SV.SHELF_1_STATE_PREV + Offset * 2, SECS_Event.Shelf_1_State_Change + Offset * 2, "OCCUPIED");
                     }
                     ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "IDLE");
                     break;
@@ -1318,6 +1464,16 @@ namespace SECSInterface
                     {
                         ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "UNSTOCKING");
                     }
+                    if (Task.Params["@ToPosition"].Contains("SHELF"))
+                    {
+                        int Offset = Convert.ToInt32(Task.Params["@ToPosition"].Replace("SHELF", "")) - 1;
+                        ReportEvent(SECS_SV.SHELF_1_STATE + Offset * 2, SECS_SV.SHELF_1_STATE_PREV + Offset * 2, SECS_Event.Shelf_1_State_Change + Offset * 2, "LOADING");
+                    }
+                    if (Task.Params["@FromPosition"].Contains("SHELF"))
+                    {
+                        int Offset = Convert.ToInt32(Task.Params["@FromPosition"].Replace("SHELF", "")) - 1;
+                        ReportEvent(SECS_SV.SHELF_1_STATE + Offset * 2, SECS_SV.SHELF_1_STATE_PREV + Offset * 2, SECS_Event.Shelf_1_State_Change + Offset * 2, "UNLOADING");
+                    }
                     break;
                 case TaskFlowManagement.Command.OPEN_FOUP:
                     if (Task.Params["@Target"].Equals("ILPT1"))
@@ -1337,12 +1493,15 @@ namespace SECSInterface
             //ReplyAck(Hack.Cannot_perform_now, Convert.ToInt32(Task.Id));
             switch (Task.TaskName)
             {
-               
-                case TaskFlowManagement.Command.RESET_WTS:
-                case TaskFlowManagement.Command.RESUME_WTS:
-                case TaskFlowManagement.Command.STOP_WTS:
-                case TaskFlowManagement.Command.TRANSFER_WTS:
-                    ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "ALARM");
+                case TaskFlowManagement.Command.FOUP_ID:
+                    if (Task.Params["@Target"].Equals("ELPT1"))
+                    {
+                        ReportEvent(SECS_DV.ELPT1_FOUP_ID, SECS_DV.ELPT1_FOUP_ID_PREV, SECS_Event.ELPT1_ID_Available, "UNKNOWN");
+                    }
+                    else
+                    {
+                        ReportEvent(SECS_DV.ELPT2_FOUP_ID, SECS_DV.ELPT2_FOUP_ID_PREV, SECS_Event.ELPT2_ID_Available, "UNKNOWN");
+                    }
                     break;
             }
         }
@@ -1427,7 +1586,7 @@ namespace SECSInterface
                 case "PTZ":
                     switch (Txn.Method)
                     {
-                        case Transaction.Command.PTZ.Transfer:
+                        //case Transaction.Command.PTZ.Transfer:
                         case Transaction.Command.PTZ.Home:
                             ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "MAPPING");
                             break;
@@ -1484,6 +1643,7 @@ namespace SECSInterface
 
         public void On_Command_Finished(Node Node, Transaction Txn, CommandReturnMessage Msg)
         {
+            Node Shelf = _Report.GetNode("SHELF");
             switch (Node.Type)
             {
                 case "FOUP_ROBOT":
@@ -1518,36 +1678,7 @@ namespace SECSInterface
                                 ReportEvent(SECS_DV.ELPT2_FOUP_ID, SECS_DV.ELPT2_FOUP_ID_PREV, SECS_Event.ELPT2_ID_Available, Msg.Value);
                             }
                             break;
-                        case Transaction.Command.ELPT.MoveOut:
-                            if (Node.Name.Equals("ELPT1"))
-                            {
-                                if (IO_State.ContainsKey("ELPT1-Place1") && IO_State.ContainsKey("ELPT1-Place2") && IO_State.ContainsKey("ELPT1-Place3") && IO_State.ContainsKey("ELPT1-Present") && IO_State.ContainsKey("ELPT1-R-POS-Unclamp") && IO_State.ContainsKey("ELPT1-L-POS-Unclamp"))
-                                {
-                                    if (IO_State["ELPT1-Place1"].Equals("1") && IO_State["ELPT1-Place2"].Equals("1") && IO_State["ELPT1-Place3"].Equals("1") && IO_State["ELPT1-Present"].Equals("1") && IO_State["ELPT1-R-POS-Unclamp"].Equals("1") && IO_State["ELPT1-L-POS-Unclamp"].Equals("1"))
-                                    {
-                                        ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_UNLOAD");
-                                    }
-                                    else if (IO_State["ELPT1-Place1"].Equals("0") && IO_State["ELPT1-Place2"].Equals("0") && IO_State["ELPT1-Place3"].Equals("0") && IO_State["ELPT1-Present"].Equals("1") && IO_State["ELPT1-R-POS-Unclamp"].Equals("1") && IO_State["ELPT1-L-POS-Unclamp"].Equals("1"))
-                                    {
-                                        ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_LOAD");
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                if (IO_State.ContainsKey("ELPT2-Place1") && IO_State.ContainsKey("ELPT2-Place2") && IO_State.ContainsKey("ELPT2-Place3") && IO_State.ContainsKey("ELPT1-Present") && IO_State.ContainsKey("ELPT2-R-POS-Unclamp") && IO_State.ContainsKey("ELPT2-L-POS-Unclamp"))
-                                {
-                                    if (IO_State["ELPT2-Place1"].Equals("1") && IO_State["ELPT2-Place2"].Equals("1") && IO_State["ELPT2-Place3"].Equals("1") && IO_State["ELPT1-Present"].Equals("1") && IO_State["ELPT2-R-POS-Unclamp"].Equals("1") && IO_State["ELPT2-L-POS-Unclamp"].Equals("1"))
-                                    {
-                                        ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_UNLOAD");
-                                    }
-                                    else if (IO_State["ELPT2-Place1"].Equals("0") && IO_State["ELPT2-Place2"].Equals("0") && IO_State["ELPT2-Place3"].Equals("0") && IO_State["ELPT1-Present"].Equals("1") && IO_State["ELPT2-R-POS-Unclamp"].Equals("1") && IO_State["ELPT2-L-POS-Unclamp"].Equals("1"))
-                                    {
-                                        ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_LOAD");
-                                    }
-                                }
-                            }
-                            break;
+
                     }
                     break;
                 case "ILPT":
@@ -1588,7 +1719,7 @@ namespace SECSInterface
                 case "PTZ":
                     switch (Txn.Method)
                     {
-                        case Transaction.Command.PTZ.Transfer:
+                        //case Transaction.Command.PTZ.Transfer:
                         case Transaction.Command.PTZ.Home:
                             string MappingState = "";
                             var odd = from job in Node.JobList.Values.ToList()
@@ -1598,8 +1729,8 @@ namespace SECSInterface
                                        where job.MapFlag && !job.ErrPosition && Convert.ToInt32(job.Slot) % 2 == 0
                                        select job;
                             var err = from job in Node.JobList.Values.ToList()
-                                       where job.ErrPosition
-                                       select job;
+                                      where job.ErrPosition
+                                      select job;
                             if (odd.Count() != 0 && even.Count() != 0)
                             {
                                 MappingState = "ODDEVEN";
@@ -1621,25 +1752,49 @@ namespace SECSInterface
                                 MappingState = "EMPTY";
                             }
                             ReportEvent(SECS_SV.PROCESS_SUBSTRATE_STATE, SECS_SV.PROCESS_SUBSTRATE_STATE_PREV, SECS_Event.Process_Substrate_State_Change, MappingState);
-
-                            ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "IDLE");
-                            break;
-                    }
-                    break;
-                case "CTU":
-                    switch (Txn.Method)
-                    {
-                        case Transaction.Command.CTU.Pick:
-                        case Transaction.Command.CTU.Place:
-                            if (Txn.Position.Equals("PTZ"))
+                            if (err.Count() != 0)
                             {
-                                ReportEvent(SECS_SV.PROCESS_SUBSTRATE_STATE, SECS_SV.PROCESS_SUBSTRATE_STATE_PREV, SECS_Event.Process_Substrate_State_Change, "PRESENT_NOT_MAPPED");
+                                ReportEvent(SECS_DV.PTZ_MAP, SECS_DV.PTZ_MAP_PREV, SECS_Event.PTZ_Map_Available, "UNKNOWN");
+                            }
+                            else
+                            {
+                                string map = "";
+                                for (int i = 0; i < Node.MappingResult.Length; i++)
+                                {
+                                    switch (Node.MappingResult[i])
+                                    {
+                                        case '0':
+                                            map += "1";
+                                            break;
+                                        case '1':
+                                            map += "3";
+                                            break;
+                                        default:
+                                            map += "0";
+                                            break;
+                                    }
+
+                                }
+                                ReportEvent(SECS_DV.PTZ_MAP, SECS_DV.PTZ_MAP_PREV, SECS_Event.PTZ_Map_Available, map);
+                                ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "IDLE");
+
+                            }
+                            break;
+                        case "CTU":
+                            switch (Txn.Method)
+                            {
+                                case Transaction.Command.CTU.Pick:
+                                case Transaction.Command.CTU.Place:
+                                    if (Txn.Position.Equals("PTZ"))
+                                    {
+                                        ReportEvent(SECS_SV.PROCESS_SUBSTRATE_STATE, SECS_SV.PROCESS_SUBSTRATE_STATE_PREV, SECS_Event.Process_Substrate_State_Change, "PRESENT_NOT_MAPPED");
+                                    }
+                                    break;
                             }
                             break;
                     }
                     break;
             }
-
         }
         private string GetSv(int Sv)
         {
@@ -1665,11 +1820,20 @@ namespace SECSInterface
                 {//狀態沒變，不發事件
                     return;
                 }
+                if (SvVal.ToString().Equals(""))
+                {
+                    //更新SV，不發事件
+                    objTemp = (object)NewState;
+                    g_lOperationResult = axQGWrapper1.UpdateSV(State, ref objTemp);
+                    objTemp = SvVal;
+                    g_lOperationResult = axQGWrapper1.UpdateSV(State_Prev, ref objTemp);
+                    return;
+                }
             }
             //更新SV
-            objTemp = (object)NewState;//PTZ_STATE
+            objTemp = (object)NewState;
             g_lOperationResult = axQGWrapper1.UpdateSV(State, ref objTemp);
-            objTemp = SvVal;//PTZ_STATE_PREV
+            objTemp = SvVal;
             g_lOperationResult = axQGWrapper1.UpdateSV(State_Prev, ref objTemp);
             //發Event report
             axQGWrapper1.EventReportSend(Event);
@@ -1721,140 +1885,101 @@ namespace SECSInterface
                     switch (IO_Name)
                     {
                         case "CTU-Present":
-                            NodeManagement.Get("CTU").R_Presence = IO_Value.Equals("1") ? true : false;
+
                             break;
                         case "PTZ-Present":
-                            NodeManagement.Get("PTZ").R_Presence = IO_Value.Equals("1") ? true : false;
-                            if (IO_Value.Equals("0"))
-                            {
-                                ReportEvent(SECS_SV.PROCESS_SUBSTRATE_STATE, SECS_SV.PROCESS_SUBSTRATE_STATE_PREV, SECS_Event.Process_Substrate_State_Change, "PRESENT_NOT_MAPPED");
-                            }
+
                             break;
                         case "ELPT1-R-POS-Clamp":
                         case "ELPT1-L-POS-Clamp":
-                            if (IO_Value.Equals("1"))
+                        case "ELPT1-R-POS-Unclamp":
+                        case "ELPT1-L-POS-Unclamp":
+
+
+                            if (IO_State.ContainsKey("ELPT1-R-POS-Clamp") && IO_State.ContainsKey("ELPT1-L-POS-Clamp") && IO_State.ContainsKey("ELPT1-R-POS-Unclamp") && IO_State.ContainsKey("ELPT1-L-POS-Unclamp"))
                             {
-
-
-                                if (IO_State.ContainsKey("ELPT1-R-POS-Clamp") && IO_State.ContainsKey("ELPT1-L-POS-Clamp"))
+                                if (IO_State["ELPT1-R-POS-Clamp"].Equals("0") && IO_State["ELPT1-L-POS-Clamp"].Equals("0") && IO_State["ELPT1-R-POS-Unclamp"].Equals("0") && IO_State["ELPT1-L-POS-Unclamp"].Equals("0"))
                                 {
-                                    if (IO_State["ELPT1-R-POS-Clamp"].Equals("1") && IO_State["ELPT1-L-POS-Clamp"].Equals("1"))
-                                    {
-                                        chk = true;
-                                    }
+                                    ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "MID");
                                 }
-
-                                if (chk)
+                                else if (IO_State["ELPT1-R-POS-Clamp"].Equals("1") && IO_State["ELPT1-L-POS-Clamp"].Equals("1"))
                                 {
                                     ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "LOCKED");
                                 }
-                                else
-                                {
-                                    ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "MID");
-                                }
-                            }
-                            break;
-                        case "ELPT1-R-POS-Unclamp":
-                        case "ELPT1-L-POS-Unclamp":
-                            if (IO_Value.Equals("1"))
-                            {
-
-
-                                if (IO_State.ContainsKey("ELPT1-R-POS-Unclamp") && IO_State.ContainsKey("ELPT1-L-POS-Unclamp"))
-                                {
-                                    if (IO_State["ELPT1-R-POS-Unclamp"].Equals("1") && IO_State["ELPT1-L-POS-Unclamp"].Equals("1"))
-                                    {
-                                        chk = true;
-                                    }
-                                }
-                                if (chk)
+                                else if (IO_State["ELPT1-R-POS-Clamp"].Equals("0") && IO_State["ELPT1-L-POS-Clamp"].Equals("0"))
                                 {
                                     ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "UNLOCKED");
                                 }
-                                else
-                                {
-                                    ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "MID");
-                                }
-
                             }
+
+
+
+
                             break;
                         case "ELPT2-R-POS-Clamp":
                         case "ELPT2-L-POS-Clamp":
-                            if (IO_Value.Equals("1"))
+                        case "ELPT2-R-POS-Unclamp":
+                        case "ELPT2-L-POS-Unclamp":
+
+
+
+                            if (IO_State.ContainsKey("ELPT2-R-POS-Clamp") && IO_State.ContainsKey("ELPT2-L-POS-Clamp") && IO_State.ContainsKey("ELPT2-R-POS-Unclamp") && IO_State.ContainsKey("ELPT2-L-POS-Unclamp"))
                             {
-
-
-
-                                if (IO_State.ContainsKey("ELPT2-R-POS-Clamp") && IO_State.ContainsKey("ELPT2-L-POS-Clamp"))
+                                if (IO_State["ELPT2-R-POS-Clamp"].Equals("0") && IO_State["ELPT2-L-POS-Clamp"].Equals("0") && IO_State["ELPT2-R-POS-Unclamp"].Equals("0") && IO_State["ELPT2-L-POS-Unclamp"].Equals("0"))
                                 {
-                                    if (IO_State["ELPT2-R-POS-Clamp"].Equals("1") && IO_State["ELPT2-L-POS-Clamp"].Equals("1"))
-                                    {
-                                        chk = true;
-                                    }
+                                    ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "MID");
                                 }
-                                if (chk)
+                                else if (IO_State["ELPT2-R-POS-Clamp"].Equals("1") && IO_State["ELPT2-L-POS-Clamp"].Equals("1"))
                                 {
                                     ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "LOCKED");
                                 }
-                                else
-                                {
-                                    ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "MID");
-                                }
-
-                            }
-                            break;
-                        case "ELPT2-R-POS-Unclamp":
-                        case "ELPT2-L-POS-Unclamp":
-                            if (IO_Value.Equals("1"))
-                            {
-
-
-                                if (IO_State.ContainsKey("ELPT2-R-POS-Unclamp") && IO_State.ContainsKey("ELPT2-L-POS-Unclamp"))
-                                {
-                                    if (IO_State["ELPT2-R-POS-Unclamp"].Equals("1") && IO_State["ELPT2-L-POS-Unclamp"].Equals("1"))
-                                    {
-                                        chk = true;
-                                    }
-                                }
-                                if (chk)
+                                else if (IO_State["ELPT2-R-POS-Clamp"].Equals("0") && IO_State["ELPT2-L-POS-Clamp"].Equals("0"))
                                 {
                                     ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "UNLOCKED");
                                 }
-                                else
+                            }
+
+
+
+
+                            break;
+                        case "ILPT1-POS-Clamp":
+                        case "ILPT1-POS-Unclamp":
+                            if (IO_State.ContainsKey("ILPT1-POS-Clamp") && IO_State.ContainsKey("ILPT1-POS-Unclamp"))
+                            {
+                                if (IO_State["ILPT1-POS-Clamp"].Equals("0") && IO_State["ILPT1-POS-Unclamp"].Equals("0"))
+                                {
+                                    ReportEvent(SECS_SV.ILPT1_LOCK_STATE, SECS_SV.ILPT1_LOCK_STATE_PREV, SECS_Event.ILPT1_LOCK_State_Change, "MID");
+                                }
+                                else if (IO_State["ILPT1-POS-Clamp"].Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ILPT1_LOCK_STATE, SECS_SV.ILPT1_LOCK_STATE_PREV, SECS_Event.ILPT1_LOCK_State_Change, "LOCKED");
+                                }
+                                else if (IO_State["ILPT1-POS-Unclamp"].Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ILPT1_LOCK_STATE, SECS_SV.ILPT1_LOCK_STATE_PREV, SECS_Event.ILPT1_LOCK_State_Change, "UNLOCKED");
+                                }
+                            }
+                            break;
+                        case "ELPT2-POS-Clamp":
+                        case "ELPT2-POS-Unclamp":
+                            if (IO_State.ContainsKey("ELPT2-POS-Clamp") && IO_State.ContainsKey("ELPT2-POS-Unclamp"))
+                            {
+                                if (IO_State["ELPT2-POS-Clamp"].Equals("0") && IO_State["ELPT2-POS-Unclamp"].Equals("0"))
                                 {
                                     ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "MID");
                                 }
+                                else if (IO_State["ELPT2-POS-Clamp"].Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "LOCKED");
+                                }
+                                else if (IO_State["ELPT2-POS-Unclamp"].Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "UNLOCKED");
+                                }
+                            }
+                            break;
 
-                            }
-                            break;
-                        case "ILPT1-POS-Clamp":
-                            if (IO_Value.Equals("1"))
-                            {
-                                ReportEvent(SECS_SV.ILPT1_LOCK_STATE, SECS_SV.ILPT1_LOCK_STATE_PREV, SECS_Event.ILPT1_LOCK_State_Change, "MID");
-                                ReportEvent(SECS_SV.ILPT1_LOCK_STATE, SECS_SV.ILPT1_LOCK_STATE_PREV, SECS_Event.ILPT1_LOCK_State_Change, "LOCKED");
-                            }
-                            break;
-                        case "ILPT1-POS-Unclamp":
-                            if (IO_Value.Equals("1"))
-                            {
-                                ReportEvent(SECS_SV.ILPT1_LOCK_STATE, SECS_SV.ILPT1_LOCK_STATE_PREV, SECS_Event.ILPT1_LOCK_State_Change, "MID");
-                                ReportEvent(SECS_SV.ILPT1_LOCK_STATE, SECS_SV.ILPT1_LOCK_STATE_PREV, SECS_Event.ILPT1_LOCK_State_Change, "UNLOCKED");
-                            }
-                            break;
-                        case "ILPT2-POS-Clamp":
-                            if (IO_Value.Equals("1"))
-                            {
-                                ReportEvent(SECS_SV.ILPT2_LOCK_STATE, SECS_SV.ILPT2_LOCK_STATE_PREV, SECS_Event.ILPT2_LOCK_State_Change, "MID");
-                                ReportEvent(SECS_SV.ILPT2_LOCK_STATE, SECS_SV.ILPT2_LOCK_STATE_PREV, SECS_Event.ILPT2_LOCK_State_Change, "LOCKED");
-                            }
-                            break;
-                        case "ILPT2-POS-Unclamp":
-                            if (IO_Value.Equals("1"))
-                            {
-                                ReportEvent(SECS_SV.ILPT2_LOCK_STATE, SECS_SV.ILPT2_LOCK_STATE_PREV, SECS_Event.ILPT2_LOCK_State_Change, "MID");
-                                ReportEvent(SECS_SV.ILPT2_LOCK_STATE, SECS_SV.ILPT2_LOCK_STATE_PREV, SECS_Event.ILPT2_LOCK_State_Change, "UNLOCKED");
-                            }
-                            break;
                         case "ILPT1-POS-Dock":
                             if (IO_Value.Equals("1"))
                             {
@@ -1889,11 +2014,11 @@ namespace SECSInterface
                                 if (IO_State["ELPT1-Place1"].Equals("1") && IO_State["ELPT1-Place2"].Equals("1") && IO_State["ELPT1-Place3"].Equals("1"))
                                 {
                                     chk = true;
-                                    NodeManagement.Get("ELPT1").R_Presence = true;
+
                                 }
                                 else
                                 {
-                                    NodeManagement.Get("ELPT1").R_Presence = false;
+
                                 }
                             }
                             if (chk)
@@ -1914,11 +2039,11 @@ namespace SECSInterface
                                 if (IO_State["ELPT2-Place1"].Equals("1") && IO_State["ELPT2-Place2"].Equals("1") && IO_State["ELPT2-Place3"].Equals("1"))
                                 {
                                     chk = true;
-                                    NodeManagement.Get("ELPT1").R_Presence = true;
+
                                 }
                                 else
                                 {
-                                    NodeManagement.Get("ELPT1").R_Presence = false;
+
                                 }
                             }
                             if (chk)
@@ -1975,7 +2100,54 @@ namespace SECSInterface
 
         public void On_Alarm_Happen(TransferControl.Management.AlarmManagement.AlarmInfo Alarm)
         {
-            SendAlarmMsg((long)Math.Pow(2, 7),Convert.ToInt64(Alarm.ALID.Equals("")?"0": Alarm.ALID), Alarm.ALTX);
+            SendAlarmMsg((long)Math.Pow(2, 7), Convert.ToInt64(Alarm.ALID.Equals("") ? "0" : Alarm.ALID), Alarm.ALTX);
+            Node Node = _Report.GetNode(Alarm.NodeName);
+            if (Node != null)
+            {
+                switch (Node.Type)
+                {
+                    case "ELPT":
+                        if (Node.Name.Equals("ELPT1"))
+                        {
+                            ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_DV.ELPT1_FOUP_ID_PREV, SECS_Event.ELPT1_FOUP_State_Change, "ALARM");
+                        }
+                        else
+                        {
+                            ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_DV.ELPT2_FOUP_ID_PREV, SECS_Event.ELPT2_FOUP_State_Change, "ALARM");
+                        }
+                        ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "ALARM");
+                        break;
+                    case "ILPT":
+                        if (Node.Name.Equals("ILPT1"))
+                        {
+                            ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "ALARM");
+                        }
+                        else
+                        {
+                            ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "ALARM");
+                        }
+                        ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "ALARM");
+                        break;
+                    case "FOUP_ROBOT":
+                        ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "ALARM");
+                        break;
+                    case "SHELF":
+                        break;
+                    case "WHR":
+                        ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "ALARM");
+                        break;
+                    case "WTS_ALIGNER":
+                        ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "ALARM");
+                        break;
+                    case "CTU":
+                        ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "ALARM");
+                        break;
+                    case "PTZ":
+                        ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE, SECS_Event.PTZ_State_Change, "ALARM");
+                        ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "ALARM");
+                        break;
+                }
+            }
         }
 
 
