@@ -108,6 +108,8 @@ namespace SECSInterface
                 ReportEvent(SECS_DV.PTZ_MAP, SECS_DV.PTZ_MAP_PREV, SECS_Event.PTZ_Map_Available, "UNKNOWN");
                 ReportEvent(SECS_DV.STOCKER_SOURCE, SECS_DV.STOCKER_SOURCE_PREV, SECS_Event.Stocker_Source_Change, "UNKNOWN");
                 ReportEvent(SECS_DV.STOCKER_DESTINATION, SECS_DV.STOCKER_DESTINATION_PREV, SECS_Event.Stocker_Destination_Change, "UNKNOWN");
+                ReportEvent(SECS_SV.ALIGNER_STATE, SECS_SV.ALIGNER_STATE_PREV, SECS_Event.ALIGNER_State_Change, "RESET_REQUIRED");
+
                 //*********************************************************************************************
 
                 state = axQGWrapper1.EnableComm();
@@ -274,6 +276,11 @@ namespace SECSInterface
                     case "CLAMP_ELPT":
                         param = new Dictionary<string, string>();
                         param.Add("@Target", remoteCmd.GetCPValue("SOURCE"));
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("ALARM") || GetSv(SECS_SV.STOCKER_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.Stocker_Reset_Required, ulSystemBytes);
+                            return;
+                        }
                         switch (remoteCmd.GetCPValue("FUNCTION"))
                         {
                             case "CLAMP":
@@ -288,6 +295,11 @@ namespace SECSInterface
                     case "FOUP_ID":
                         param = new Dictionary<string, string>();
                         param.Add("@Target", remoteCmd.GetCPValue("SOURCE"));
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("ALARM") || GetSv(SECS_SV.STOCKER_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.Stocker_Reset_Required, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.FOUP_ID, param);
                         break;
                     case "MOVE_FOUP":
@@ -309,7 +321,7 @@ namespace SECSInterface
                             ReplyAck(Hack.At_least_one_parameter_is_invalid, ulSystemBytes);
                             return;
                         }
-                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("ALARM"))
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("ALARM") || GetSv(SECS_SV.STOCKER_STATE).Equals("RESET_REQUIRED"))
                         {
                             ReplyAck(Hack.Stocker_Reset_Required, ulSystemBytes);
                             return;
@@ -378,12 +390,27 @@ namespace SECSInterface
 
                         break;
                     case "STOP_STOCKER":
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("ALARM") || GetSv(SECS_SV.STOCKER_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.Stocker_Reset_Required, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.STOP_STOCKER, null);
                         break;
                     case "RESUME_STOCKER":
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("ALARM") || GetSv(SECS_SV.STOCKER_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.Stocker_Reset_Required, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RESUME_STOCKER, null);
                         break;
                     case "ABORT_STOCKER":
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("ALARM") || GetSv(SECS_SV.STOCKER_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.Stocker_Reset_Required, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.ABORT_STOCKER, null);
                         break;
                     case "RESET_STOCKER":
@@ -428,7 +455,11 @@ namespace SECSInterface
                             }
                             return;
                         }
-
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("ALARM") || GetSv(SECS_SV.STOCKER_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.Stocker_Reset_Required, ulSystemBytes);
+                            return;
+                        }
                         if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("ID_CONFIRMATION") && !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("READY_TO_UNLOAD")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Empty, ulSystemBytes);
@@ -464,6 +495,11 @@ namespace SECSInterface
                             }
                             return;
                         }
+                        if (GetSv(SECS_SV.STOCKER_STATE).Equals("ALARM") || GetSv(SECS_SV.STOCKER_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.Stocker_Reset_Required, ulSystemBytes);
+                            return;
+                        }
                         if (_Report.GetNode(param["@Target"]).Name.Equals("ILPT1") && (!GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("PREMAP_CONFIRM") && !GetSv(SECS_SV.ILPT1_FOUP_STATE).Equals("POSTMAP_CONFIRM")))
                         {
                             ReplyAck(Hack.WTS_ILPT_Door_is_not_Open, ulSystemBytes);
@@ -488,7 +524,7 @@ namespace SECSInterface
                             ReplyAck(Hack.At_least_one_parameter_is_invalid, ulSystemBytes);
                             return;
                         }
-                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM"))
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM") || GetSv(SECS_SV.WTS_STATE).Equals("RESET_REQUIRED"))
                         {
                             ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
                             return;
@@ -567,12 +603,27 @@ namespace SECSInterface
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.TRANSFER_WTS, param);
                         break;
                     case "STOP_WTS":
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM") || GetSv(SECS_SV.WTS_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.STOP_WTS, null);
                         break;
                     case "RESUME_WTS":
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM") || GetSv(SECS_SV.WTS_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RESUME_WTS, null);
                         break;
                     case "ABORT_WTS":
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM") || GetSv(SECS_SV.WTS_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.ABORT_WTS, null);
                         break;
                     case "RESET_WTS":
@@ -620,7 +671,7 @@ namespace SECSInterface
                             ReplyAck(Hack.At_least_one_parameter_is_invalid, ulSystemBytes);
                             return;
                         }
-                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM"))
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM") || GetSv(SECS_SV.WTS_STATE).Equals("RESET_REQUIRED"))
                         {
                             ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
                             return;
@@ -661,21 +712,55 @@ namespace SECSInterface
                         param = new Dictionary<string, string>();
                         param.Add("@Target", "WTS_ALIGNER");
                         param.Add("@Value", remoteCmd.GetCPValue("NOTCH_DEGREES"));
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM") || GetSv(SECS_SV.WTS_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.WTSALIGNER_ALIGN, param);
                         break;
                     case "BLOCK_PTZ":
                         param = new Dictionary<string, string>();
                         param.Add("@Path", remoteCmd.GetCPValue("PATH").Equals("DIRTY") ? "1" : "0");
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM") || GetSv(SECS_SV.WTS_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
+                            return;
+                        }
+                        if (!GetSv(SECS_SV.PTZ_STATE).Equals("IDLE"))
+                        {
+                            ReplyAck(Hack.WTS_PTZ_is_not_Idle, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.BLOCK_PTZ, param);
                         break;
                     case "RELEASE_PTZ":
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM") || GetSv(SECS_SV.WTS_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RELEASE_PTZ, null);
                         break;
                     case "BLOCK_ALIGNER":
-
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM") || GetSv(SECS_SV.WTS_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
+                            return;
+                        }
+                        if (!GetSv(SECS_SV.ALIGNER_STATE).Equals("IDLE"))
+                        {
+                            ReplyAck(Hack.WTS_Aligner_is_not_Idle, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.BLOCK_ALIGNER, null);
                         break;
                     case "RELEASE_ALIGNER":
+                        if (GetSv(SECS_SV.WTS_STATE).Equals("ALARM") || GetSv(SECS_SV.WTS_STATE).Equals("RESET_REQUIRED"))
+                        {
+                            ReplyAck(Hack.WTS_Reset_is_Required, ulSystemBytes);
+                            return;
+                        }
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RELEASE_ALIGNER, null);
                         break;
                     case "PORT_ACCESS_MODE":
@@ -1040,7 +1125,9 @@ namespace SECSInterface
             Stocker_Source_Empty = 93,
             Stocker_Destination_Full = 94,
             WTS_CTU_Full = 100,
-            WTS_CTU_Empty = 101
+            WTS_CTU_Empty = 101,
+            WTS_Aligner_is_not_Idle = 103,
+            WTS_PTZ_is_not_Idle = 104
         }
         class RemoteCommand
         {
@@ -1208,10 +1295,10 @@ namespace SECSInterface
                     }
 
 
+                    ReportEvent(SECS_SV.ALIGNER_STATE, SECS_SV.ALIGNER_STATE_PREV, SECS_Event.ALIGNER_State_Change, "IDLE");
 
-                    ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "IDLE");
                     ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "IDLE");
-
+                    ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "IDLE");
                     break;
                 case TaskFlowManagement.Command.TRANSFER_PTZ:
                     ReportEvent(SECS_SV.PROCESS_SUBSTRATE_STATE, SECS_SV.PROCESS_SUBSTRATE_STATE_PREV, SECS_Event.Process_Substrate_State_Change, "PRESENT_NOT_MAPPED");
@@ -1221,11 +1308,11 @@ namespace SECSInterface
                 case TaskFlowManagement.Command.TRANSFER_WTS:
                     if (Task.Params["@FromPosition"].Equals("ILPT1") || Task.Params["@ToPosition"].Equals("ILPT1"))
                     {
-                        ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "READY_TO_UNLOAD");
+                        ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "POSTMAP_CONFIRM");
                     }
                     if (Task.Params["@FromPosition"].Equals("ILPT2") || Task.Params["@ToPosition"].Equals("ILPT2"))
                     {
-                        ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "READY_TO_UNLOAD");
+                        ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "POSTMAP_CONFIRM");
                     }
                     ReportEvent(SECS_SV.WTS_STATE, SECS_SV.WTS_STATE_PREV, SECS_Event.WTS_State_Change, "IDLE");
                     break;
@@ -1359,11 +1446,11 @@ namespace SECSInterface
 
                     if (Task.Params["@ToPosition"].Equals("ILPT1"))
                     {
-                        ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "ID_CONFIRMATION");
+                        ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "ID_CONFIRMATION");
                     }
                     if (Task.Params["@ToPosition"].Equals("ILPT2"))
                     {
-                        ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "ID_CONFIRMATION");
+                        ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "ID_CONFIRMATION");
                     }
                     if (Task.Params["@FromPosition"].Contains("ELPT") || Task.Params["@ToPosition"].Contains("ELPT"))
                     {
@@ -1496,11 +1583,11 @@ namespace SECSInterface
                 case TaskFlowManagement.Command.FOUP_ID:
                     if (Task.Params["@Target"].Equals("ELPT1"))
                     {
-                        ReportEvent(SECS_DV.ELPT1_FOUP_ID, SECS_DV.ELPT1_FOUP_ID_PREV, SECS_Event.ELPT1_ID_Available, "UNKNOWN");
+                        ReportEvent(SECS_DV.ELPT1_FOUP_ID, SECS_DV.ELPT1_FOUP_ID_PREV, SECS_Event.ELPT1_ID_Available, "UNKNOWN", true);
                     }
                     else
                     {
-                        ReportEvent(SECS_DV.ELPT2_FOUP_ID, SECS_DV.ELPT2_FOUP_ID_PREV, SECS_Event.ELPT2_ID_Available, "UNKNOWN");
+                        ReportEvent(SECS_DV.ELPT2_FOUP_ID, SECS_DV.ELPT2_FOUP_ID_PREV, SECS_Event.ELPT2_ID_Available, "UNKNOWN", true);
                     }
                     break;
             }
@@ -1611,6 +1698,21 @@ namespace SECSInterface
                             break;
                     }
                     break;
+                case "ILPT":
+                    switch (Txn.Method)
+                    {
+                        case Transaction.Command.ILPT.RaiseClose:
+                            if (Node.Name.Equals("ILPT1"))
+                            {
+                                ReportEvent(SECS_SV.ILPT1_FOUP_STATE, SECS_SV.ILPT1_FOUP_STATE_PREV, SECS_Event.ILPT1_FOUP_State_Change, "POSTMAPPING");
+                            }
+                            else
+                            {
+                                ReportEvent(SECS_SV.ILPT2_FOUP_STATE, SECS_SV.ILPT2_FOUP_STATE_PREV, SECS_Event.ILPT2_FOUP_State_Change, "POSTMAPPING");
+                            }
+                            break;
+                    }
+                    break;
             }
 
         }
@@ -1671,11 +1773,11 @@ namespace SECSInterface
                         case Transaction.Command.ELPT.ReadCID:
                             if (Node.Name.Equals("ELPT1"))
                             {
-                                ReportEvent(SECS_DV.ELPT1_FOUP_ID, SECS_DV.ELPT1_FOUP_ID_PREV, SECS_Event.ELPT1_ID_Available, Msg.Value);
+                                ReportEvent(SECS_DV.ELPT1_FOUP_ID, SECS_DV.ELPT1_FOUP_ID_PREV, SECS_Event.ELPT1_ID_Available, Msg.Value, true);
                             }
                             else
                             {
-                                ReportEvent(SECS_DV.ELPT2_FOUP_ID, SECS_DV.ELPT2_FOUP_ID_PREV, SECS_Event.ELPT2_ID_Available, Msg.Value);
+                                ReportEvent(SECS_DV.ELPT2_FOUP_ID, SECS_DV.ELPT2_FOUP_ID_PREV, SECS_Event.ELPT2_ID_Available, Msg.Value, true);
                             }
                             break;
 
@@ -1705,12 +1807,12 @@ namespace SECSInterface
                             if (Node.Name.Equals("ILPT1"))
                             {
 
-                                ReportEvent(SECS_DV.ILPT1_MAP, SECS_DV.ILPT1_MAP_PREV, SECS_Event.ILPT1_Wafer_Map_Available, res);
+                                ReportEvent(SECS_DV.ILPT1_MAP, SECS_DV.ILPT1_MAP_PREV, SECS_Event.ILPT1_Wafer_Map_Available, res, true);
                                 break;
                             }
                             else if (Node.Name.Equals("ILPT2"))
                             {
-                                ReportEvent(SECS_DV.ILPT2_MAP, SECS_DV.ILPT2_MAP_PREV, SECS_Event.ILPT2_Wafer_Map_Available, res);
+                                ReportEvent(SECS_DV.ILPT2_MAP, SECS_DV.ILPT2_MAP_PREV, SECS_Event.ILPT2_Wafer_Map_Available, res, true);
                                 break;
                             }
                             break;
@@ -1751,7 +1853,7 @@ namespace SECSInterface
                             {
                                 MappingState = "EMPTY";
                             }
-                            ReportEvent(SECS_SV.PROCESS_SUBSTRATE_STATE, SECS_SV.PROCESS_SUBSTRATE_STATE_PREV, SECS_Event.Process_Substrate_State_Change, MappingState);
+                            ReportEvent(SECS_SV.PROCESS_SUBSTRATE_STATE, SECS_SV.PROCESS_SUBSTRATE_STATE_PREV, SECS_Event.Process_Substrate_State_Change, MappingState, true);
                             if (err.Count() != 0)
                             {
                                 ReportEvent(SECS_DV.PTZ_MAP, SECS_DV.PTZ_MAP_PREV, SECS_Event.PTZ_Map_Available, "UNKNOWN");
@@ -1775,7 +1877,7 @@ namespace SECSInterface
                                     }
 
                                 }
-                                ReportEvent(SECS_DV.PTZ_MAP, SECS_DV.PTZ_MAP_PREV, SECS_Event.PTZ_Map_Available, map);
+                                ReportEvent(SECS_DV.PTZ_MAP, SECS_DV.PTZ_MAP_PREV, SECS_Event.PTZ_Map_Available, map, true);
                                 ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "IDLE");
 
                             }
@@ -1807,37 +1909,41 @@ namespace SECSInterface
                 return SvVal.ToString();
             }
         }
-        private void ReportEvent(int State, int State_Prev, int Event, string NewState)
+        private void ReportEvent(int State, int State_Prev, int Event, string NewState, bool ForceReport = false)
         {
-            object objTemp;
-            QGACTIVEXLib.SV_DATA_TYPE GetFormat;
-            object SvVal = null;
-            //取得目前狀態
             lock (this)
             {
-                axQGWrapper1.GetSV(State, out GetFormat, out SvVal);
-                if (SvVal.ToString().Equals(NewState))
-                {//狀態沒變，不發事件
-                    return;
-                }
-                if (SvVal.ToString().Equals(""))
-                {
-                    //更新SV，不發事件
-                    objTemp = (object)NewState;
-                    g_lOperationResult = axQGWrapper1.UpdateSV(State, ref objTemp);
-                    objTemp = SvVal;
-                    g_lOperationResult = axQGWrapper1.UpdateSV(State_Prev, ref objTemp);
-                    return;
-                }
-            }
-            //更新SV
-            objTemp = (object)NewState;
-            g_lOperationResult = axQGWrapper1.UpdateSV(State, ref objTemp);
-            objTemp = SvVal;
-            g_lOperationResult = axQGWrapper1.UpdateSV(State_Prev, ref objTemp);
-            //發Event report
-            axQGWrapper1.EventReportSend(Event);
+                object objTemp;
+                QGACTIVEXLib.SV_DATA_TYPE GetFormat;
+                object SvVal = null;
+                //取得目前狀態
 
+                axQGWrapper1.GetSV(State, out GetFormat, out SvVal);
+                if (!ForceReport)
+                {
+                    if (SvVal.ToString().Equals(NewState))
+                    {//狀態沒變，不發事件
+                        return;
+                    }
+                    if (SvVal.ToString().Equals(""))
+                    {
+                        //更新SV，不發事件
+                        objTemp = (object)NewState;
+                        g_lOperationResult = axQGWrapper1.UpdateSV(State, ref objTemp);
+                        objTemp = SvVal;
+                        g_lOperationResult = axQGWrapper1.UpdateSV(State_Prev, ref objTemp);
+                        return;
+                    }
+                }
+
+                //更新SV
+                objTemp = (object)NewState;
+                g_lOperationResult = axQGWrapper1.UpdateSV(State, ref objTemp);
+                objTemp = SvVal;
+                g_lOperationResult = axQGWrapper1.UpdateSV(State_Prev, ref objTemp);
+                //發Event report
+                axQGWrapper1.EventReportSend(Event);
+            }
         }
 
         public void On_Command_TimeOut(Node Node, Transaction Txn)
