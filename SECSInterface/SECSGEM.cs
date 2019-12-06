@@ -266,7 +266,7 @@ namespace SECSInterface
             {
                 _Report.On_Message_Log("SECS", pEventText);
                 _Report.On_Message_Log("SECS", ShowSECSIIMessage(RawData));
-
+                
             }
             if (lResult == QGACTIVEXLib.PROCESS_MSG_RESULT.REPLY_BY_AP && S == 2 && F == 41)
             {
@@ -417,10 +417,10 @@ namespace SECSInterface
                         QGACTIVEXLib.SV_DATA_TYPE GetFormat;
                         object SvVal = null;
 
-                        axQGWrapper1.GetSV(SECS_DV.STOCKER_SOURCE, out GetFormat, out SvVal);
+                        axQGWrapper1.GetSV((int)SECS_DV.STOCKER_SOURCE, out GetFormat, out SvVal);
                         param = new Dictionary<string, string>();
                         param.Add("@Source", SvVal.ToString());
-                        axQGWrapper1.GetSV(SECS_DV.STOCKER_DESTINATION, out GetFormat, out SvVal);
+                        axQGWrapper1.GetSV((int)SECS_DV.STOCKER_DESTINATION, out GetFormat, out SvVal);
                         param.Add("@Destination", SvVal.ToString());
                         if (GetSv(SECS_SV.WTS_STATE).Equals("RESETTING"))
                         {
@@ -646,10 +646,10 @@ namespace SECSInterface
                             case "BACK_TO_BACK":
                                 tmp = "1";
                                 break;
-                            case "FACE_TO_BACK":
+                            case "ALL_BACK":
                                 tmp = "2";
                                 break;
-                            case "BACK_TO_FACE":
+                            case "ALL_FWD":
                                 tmp = "3";
                                 break;
                         }
@@ -1663,10 +1663,15 @@ namespace SECSInterface
                             {
                                 ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "LOADING");
                             }
-                            else if (Txn.Position.Equals("WHR"))
+                  
+                            
+                            break;
+                        case Transaction.Command.CTU.Pick:
+                            if (Txn.Position.Equals("PTZ"))
                             {
                                 ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "UNLOADING");
                             }
+
                             break;
                     }
                     break;
@@ -1898,18 +1903,29 @@ namespace SECSInterface
                     break;
             }
         }
-        private string GetSv(int Sv)
+        private string GetSv(SECS_DV Sv)
         {
             QGACTIVEXLib.SV_DATA_TYPE GetFormat;
             object SvVal = null;
             //取得目前狀態
             lock (this)
             {
-                axQGWrapper1.GetSV(Sv, out GetFormat, out SvVal);
+                axQGWrapper1.GetSV((int)Sv, out GetFormat, out SvVal);
                 return SvVal.ToString();
             }
         }
-        private void ReportEvent(int State, int State_Prev, int Event, string NewState, bool ForceReport = false)
+        private string GetSv(SECS_SV Sv)
+        {
+            QGACTIVEXLib.SV_DATA_TYPE GetFormat;
+            object SvVal = null;
+            //取得目前狀態
+            lock (this)
+            {
+                axQGWrapper1.GetSV((int)Sv, out GetFormat, out SvVal);
+                return SvVal.ToString();
+            }
+        }
+        private void ReportEvent(SECS_SV State, SECS_SV State_Prev, SECS_Event Event, string NewState, bool ForceReport = false)
         {
             lock (this)
             {
@@ -1918,7 +1934,7 @@ namespace SECSInterface
                 object SvVal = null;
                 //取得目前狀態
 
-                axQGWrapper1.GetSV(State, out GetFormat, out SvVal);
+                axQGWrapper1.GetSV((int)State, out GetFormat, out SvVal);
                 if (!ForceReport)
                 {
                     if (SvVal.ToString().Equals(NewState))
@@ -1929,23 +1945,60 @@ namespace SECSInterface
                     {
                         //更新SV，不發事件
                         objTemp = (object)NewState;
-                        g_lOperationResult = axQGWrapper1.UpdateSV(State, ref objTemp);
+                        g_lOperationResult = axQGWrapper1.UpdateSV((int)State, ref objTemp);
                         objTemp = SvVal;
-                        g_lOperationResult = axQGWrapper1.UpdateSV(State_Prev, ref objTemp);
+                        g_lOperationResult = axQGWrapper1.UpdateSV((int)State_Prev, ref objTemp);
                         return;
                     }
                 }
 
                 //更新SV
                 objTemp = (object)NewState;
-                g_lOperationResult = axQGWrapper1.UpdateSV(State, ref objTemp);
+                g_lOperationResult = axQGWrapper1.UpdateSV((int)State, ref objTemp);
                 objTemp = SvVal;
-                g_lOperationResult = axQGWrapper1.UpdateSV(State_Prev, ref objTemp);
+                g_lOperationResult = axQGWrapper1.UpdateSV((int)State_Prev, ref objTemp);
                 //發Event report
-                axQGWrapper1.EventReportSend(Event);
+                axQGWrapper1.EventReportSend((int)Event);
+                _Report.On_Message_Log("SECS", "Event:"+Event.ToString()+" Parameters:"+State.ToString() + ", "+State_Prev.ToString());
             }
         }
+        private void ReportEvent(SECS_DV State, SECS_DV State_Prev, SECS_Event Event, string NewState, bool ForceReport = false)
+        {
+            lock (this)
+            {
+                object objTemp;
+                QGACTIVEXLib.SV_DATA_TYPE GetFormat;
+                object SvVal = null;
+                //取得目前狀態
 
+                axQGWrapper1.GetSV((int)State, out GetFormat, out SvVal);
+                if (!ForceReport)
+                {
+                    if (SvVal.ToString().Equals(NewState))
+                    {//狀態沒變，不發事件
+                        return;
+                    }
+                    if (SvVal.ToString().Equals(""))
+                    {
+                        //更新SV，不發事件
+                        objTemp = (object)NewState;
+                        g_lOperationResult = axQGWrapper1.UpdateSV((int)State, ref objTemp);
+                        objTemp = SvVal;
+                        g_lOperationResult = axQGWrapper1.UpdateSV((int)State_Prev, ref objTemp);
+                        return;
+                    }
+                }
+
+                //更新SV
+                objTemp = (object)NewState;
+                g_lOperationResult = axQGWrapper1.UpdateSV((int)State, ref objTemp);
+                objTemp = SvVal;
+                g_lOperationResult = axQGWrapper1.UpdateSV((int)State_Prev, ref objTemp);
+                //發Event report
+                axQGWrapper1.EventReportSend((int)Event);
+               
+            }
+        }
         public void On_Command_TimeOut(Node Node, Transaction Txn)
         {
 
@@ -2215,11 +2268,11 @@ namespace SECSInterface
                     case "ELPT":
                         if (Node.Name.Equals("ELPT1"))
                         {
-                            ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_DV.ELPT1_FOUP_ID_PREV, SECS_Event.ELPT1_FOUP_State_Change, "ALARM");
+                            ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "ALARM");
                         }
                         else
                         {
-                            ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_DV.ELPT2_FOUP_ID_PREV, SECS_Event.ELPT2_FOUP_State_Change, "ALARM");
+                            ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "ALARM");
                         }
                         ReportEvent(SECS_SV.STOCKER_STATE, SECS_SV.STOCKER_STATE_PREV, SECS_Event.Stocker_State_Change, "ALARM");
                         break;
@@ -2278,161 +2331,161 @@ namespace SECSInterface
             throw new NotImplementedException();
         }
 
-        static class SECS_Event
+        enum SECS_Event
         {
-            public const int Stocker_State_Change = 5001;
-            public const int WTS_State_Change = 5002;
-            public const int System_Mode_Change = 5004;
-            public const int Stocker_Source_Change = 5006;
-            public const int Stocker_Destination_Change = 5008;
-            public const int ELPT1_Mode_Change = 5100;
-            public const int ELPT1_FOUP_State_Change = 5102;
-            public const int ELPT1_LOCK_State_Change = 5104;
-            public const int ELPT2_Mode_Change = 5110;
-            public const int ELPT2_FOUP_State_Change = 5112;
-            public const int ELPT2_LOCK_State_Change = 5114;
-            public const int ILPT1_Mode_Change = 5200;
-            public const int ILPT1_FOUP_State_Change = 5202;
-            public const int ILPT1_LOCK_State_Change = 5204;
-            public const int ILPT2_Mode_Change = 5210;
-            public const int ILPT2_FOUP_State_Change = 5212;
-            public const int ILPT2_LOCK_State_Change = 5214;
-            public const int Gripper_FOUP_State_Change = 5250;
-            public const int Shelf_1_State_Change = 5300;
-            public const int Shelf_2_State_Change = 5302;
-            public const int Shelf_3_State_Change = 5304;
-            public const int Shelf_4_State_Change = 5306;
-            public const int Shelf_5_State_Change = 5308;
-            public const int Shelf_6_State_Change = 5310;
-            public const int Shelf_7_State_Change = 5312;
-            public const int Shelf_8_State_Change = 5314;
-            public const int Shelf_9_State_Change = 5316;
-            public const int Shelf_10_State_Change = 5318;
-            public const int Shelf_11_State_Change = 5320;
-            public const int Shelf_12_State_Change = 5322;
-            public const int Shelf_13_State_Change = 5324;
-            public const int Shelf_14_State_Change = 5326;
-            public const int Shelf_15_State_Change = 5328;
-            public const int Shelf_16_State_Change = 5330;
-            public const int Shelf_17_State_Change = 5332;
-            public const int Shelf_18_State_Change = 5334;
-            public const int PTZ_State_Change = 5340;
-            public const int Process_Carrier_WTS_State_Change = 5344;
-            public const int ELPT1_ID_Available = 5520;
-            public const int ELPT2_ID_Available = 5521;
-            public const int ILPT1_ID_Available = 5522;
-            public const int ILPT2_ID_Available = 5523;
-            public const int ILPT1_Wafer_Map_Available = 5530;
-            public const int ILPT2_Wafer_Map_Available = 5531;
-            public const int PTZ_Map_Available = 5532;
-            public const int ALIGNER_State_Change = 5551;
-            public const int Process_Substrate_State_Change = 5552;
-            public const int Light_Curtain_State_Change = 5600;
-            public const int ESTOP_State_Change = 5602;
+            Stocker_State_Change = 5001,
+             WTS_State_Change = 5002,
+             System_Mode_Change = 5004,
+             Stocker_Source_Change = 5006,
+             Stocker_Destination_Change = 5008,
+             ELPT1_Mode_Change = 5100,
+             ELPT1_FOUP_State_Change = 5102,
+             ELPT1_LOCK_State_Change = 5104,
+             ELPT2_Mode_Change = 5110,
+             ELPT2_FOUP_State_Change = 5112,
+             ELPT2_LOCK_State_Change = 5114,
+             ILPT1_Mode_Change = 5200,
+             ILPT1_FOUP_State_Change = 5202,
+             ILPT1_LOCK_State_Change = 5204,
+             ILPT2_Mode_Change = 5210,
+             ILPT2_FOUP_State_Change = 5212,
+             ILPT2_LOCK_State_Change = 5214,
+             Gripper_FOUP_State_Change = 5250,
+             Shelf_1_State_Change = 5300,
+             Shelf_2_State_Change = 5302,
+             Shelf_3_State_Change = 5304,
+             Shelf_4_State_Change = 5306,
+             Shelf_5_State_Change = 5308,
+             Shelf_6_State_Change = 5310,
+             Shelf_7_State_Change = 5312,
+             Shelf_8_State_Change = 5314,
+             Shelf_9_State_Change = 5316,
+             Shelf_10_State_Change = 5318,
+             Shelf_11_State_Change = 5320,
+             Shelf_12_State_Change = 5322,
+             Shelf_13_State_Change = 5324,
+             Shelf_14_State_Change = 5326,
+             Shelf_15_State_Change = 5328,
+             Shelf_16_State_Change = 5330,
+             Shelf_17_State_Change = 5332,
+             Shelf_18_State_Change = 5334,
+             PTZ_State_Change = 5340,
+             Process_Carrier_WTS_State_Change = 5344,
+             ELPT1_ID_Available = 5520,
+             ELPT2_ID_Available = 5521,
+             ILPT1_ID_Available = 5522,
+             ILPT2_ID_Available = 5523,
+             ILPT1_Wafer_Map_Available = 5530,
+             ILPT2_Wafer_Map_Available = 5531,
+             PTZ_Map_Available = 5532,
+             ALIGNER_State_Change = 5551,
+             Process_Substrate_State_Change = 5552,
+             Light_Curtain_State_Change = 5600,
+             ESTOP_State_Change = 5602
         }
-        static class SECS_DV
+        enum SECS_DV
         {
-            public const int ELPT1_FOUP_ID = 7000;
-            public const int ELPT1_FOUP_ID_PREV = 7001;
-            public const int ELPT2_FOUP_ID = 7002;
-            public const int ELPT2_FOUP_ID_PREV = 7003;
-            public const int ILPT1_FOUP_ID = 7010;
-            public const int ILPT1_FOUP_ID_PREV = 7011;
-            public const int ILPT2_FOUP_ID = 7012;
-            public const int ILPT2_FOUP_ID_PREV = 7013;
-            public const int ILPT1_MAP = 7020;
-            public const int ILPT1_MAP_PREV = 7021;
-            public const int ILPT2_MAP = 7022;
-            public const int ILPT2_MAP_PREV = 7023;
-            public const int PTZ_MAP = 7030;
-            public const int PTZ_MAP_PREV = 7031;
-            public const int STOCKER_SOURCE = 7040;
-            public const int STOCKER_SOURCE_PREV = 7041;
-            public const int STOCKER_DESTINATION = 7050;
-            public const int STOCKER_DESTINATION_PREV = 7051;
-            public const int SYSTEM_MODE = 7060;
-            public const int SYSTEM_MODE_PREV = 7061;
+            ELPT1_FOUP_ID = 7000,
+             ELPT1_FOUP_ID_PREV = 7001,
+             ELPT2_FOUP_ID = 7002,
+             ELPT2_FOUP_ID_PREV = 7003,
+             ILPT1_FOUP_ID = 7010,
+             ILPT1_FOUP_ID_PREV = 7011,
+             ILPT2_FOUP_ID = 7012,
+             ILPT2_FOUP_ID_PREV = 7013,
+             ILPT1_MAP = 7020,
+             ILPT1_MAP_PREV = 7021,
+             ILPT2_MAP = 7022,
+             ILPT2_MAP_PREV = 7023,
+             PTZ_MAP = 7030,
+             PTZ_MAP_PREV = 7031,
+             STOCKER_SOURCE = 7040,
+             STOCKER_SOURCE_PREV = 7041,
+             STOCKER_DESTINATION = 7050,
+             STOCKER_DESTINATION_PREV = 7051,
+             SYSTEM_MODE = 7060,
+             SYSTEM_MODE_PREV = 7061
         }
-        static class SECS_SV
+        enum SECS_SV
         {
-            public const int STOCKER_STATE = 9000;
-            public const int STOCKER_STATE_PREV = 9001;
-            public const int WTS_STATE = 9002;
-            public const int WTS_STATE_PREV = 9003;
-            public const int RESERVED = 9004;
-            public const int RESERVED_PREV = 9005;
-            public const int ELPT1_MODE = 9100;
-            public const int ELPT1_MODE_PREV = 9101;
-            public const int ELPT1_FOUP_STATE = 9104;
-            public const int ELPT1_FOUP_STATE_PREV = 9105;
-            public const int ELPT1_LOCK_STATE = 9106;
-            public const int ELPT1_LOCK_STATE_PREV = 9107;
-            public const int ELPT2_MODE = 9110;
-            public const int ELPT2_MODE_PREV = 9111;
-            public const int ELPT2_FOUP_STATE = 9114;
-            public const int ELPT2_FOUP_STATE_PREV = 9115;
-            public const int ELPT2_LOCK_STATE = 9116;
-            public const int ELPT2_LOCK_STATE_PREV = 9117;
-            public const int ILPT1_MODE = 9200;
-            public const int ILPT1_MODE_PREV = 9201;
-            public const int ILPT1_FOUP_STATE = 9204;
-            public const int ILPT1_FOUP_STATE_PREV = 9205;
-            public const int ILPT1_LOCK_STATE = 9206;
-            public const int ILPT1_LOCK_STATE_PREV = 9207;
-            public const int ILPT2_MODE = 9210;
-            public const int ILPT2_MODE_PREV = 9211;
-            public const int ILPT2_FOUP_STATE = 9214;
-            public const int ILPT2_FOUP_STATE_PREV = 9215;
-            public const int ILPT2_LOCK_STATE = 9216;
-            public const int ILPT2_LOCK_STATE_PREV = 9217;
-            public const int GRIPPER_FOUP_STATE = 9250;
-            public const int GRIPPER_FOUP_STATE_PREV = 9251;
-            public const int SHELF_1_STATE = 9300;
-            public const int SHELF_1_STATE_PREV = 9301;
-            public const int SHELF_2_STATE = 9302;
-            public const int SHELF_2_STATE_PREV = 9303;
-            public const int SHELF_3_STATE = 9304;
-            public const int SHELF_3_STATE_PREV = 9305;
-            public const int SHELF_4_STATE = 9306;
-            public const int SHELF_4_STATE_PREV = 9307;
-            public const int SHELF_5_STATE = 9308;
-            public const int SHELF_5_STATE_PREV = 9309;
-            public const int SHELF_6_STATE = 9310;
-            public const int SHELF_6_STATE_PREV = 9311;
-            public const int SHELF_7_STATE = 9312;
-            public const int SHELF_7_STATE_PREV = 9313;
-            public const int SHELF_8_STATE = 9314;
-            public const int SHELF_8_STATE_PREV = 9315;
-            public const int SHELF_9_STATE = 9316;
-            public const int SHELF_9_STATE_PREV = 9317;
-            public const int SHELF_10_STATE = 9318;
-            public const int SHELF_10_STATE_PREV = 9319;
-            public const int SHELF_11_STATE = 9320;
-            public const int SHELF_11_STATE_PREV = 9321;
-            public const int SHELF_12_STATE = 9322;
-            public const int SHELF_12_STATE_PREV = 9323;
-            public const int SHELF_13_STATE = 9324;
-            public const int SHELF_13_STATE_PREV = 9325;
-            public const int SHELF_14_STATE = 9326;
-            public const int SHELF_14_STATE_PREV = 9327;
-            public const int SHELF_15_STATE = 9328;
-            public const int SHELF_15_STATE_PREV = 9329;
-            public const int SHELF_16_STATE = 9330;
-            public const int SHELF_16_STATE_PREV = 9331;
-            public const int SHELF_17_STATE = 9332;
-            public const int SHELF_17_STATE_PREV = 9333;
-            public const int SHELF_18_STATE = 9334;
-            public const int SHELF_18_STATE_PREV = 9335;
-            public const int PROCESS_SUBSTRATE_STATE = 9342;
-            public const int PROCESS_SUBSTRATE_STATE_PREV = 9343;
-            public const int PTZ_STATE = 9344;
-            public const int PTZ_STATE_PREV = 9345;
-            public const int ALIGNER_STATE = 9360;
-            public const int ALIGNER_STATE_PREV = 9361;
-            public const int LIGHT_CURTAIN_STATE = 9400;
-            public const int LIGHT_CURTAIN_STATE_PREV = 9401;
-            public const int ESTOP_STATE = 9402;
-            public const int ESTOP_STATE_PREV = 9403;
+            STOCKER_STATE = 9000,
+            STOCKER_STATE_PREV = 9001,
+            WTS_STATE = 9002,
+            WTS_STATE_PREV = 9003,
+            RESERVED = 9004,
+            RESERVED_PREV = 9005,
+            ELPT1_MODE = 9100,
+            ELPT1_MODE_PREV = 9101,
+            ELPT1_FOUP_STATE = 9104,
+            ELPT1_FOUP_STATE_PREV = 9105,
+            ELPT1_LOCK_STATE = 9106,
+            ELPT1_LOCK_STATE_PREV = 9107,
+            ELPT2_MODE = 9110,
+            ELPT2_MODE_PREV = 9111,
+            ELPT2_FOUP_STATE = 9114,
+            ELPT2_FOUP_STATE_PREV = 9115,
+            ELPT2_LOCK_STATE = 9116,
+            ELPT2_LOCK_STATE_PREV = 9117,
+            ILPT1_MODE = 9200,
+            ILPT1_MODE_PREV = 9201,
+            ILPT1_FOUP_STATE = 9204,
+            ILPT1_FOUP_STATE_PREV = 9205,
+            ILPT1_LOCK_STATE = 9206,
+            ILPT1_LOCK_STATE_PREV = 9207,
+            ILPT2_MODE = 9210,
+            ILPT2_MODE_PREV = 9211,
+            ILPT2_FOUP_STATE = 9214,
+            ILPT2_FOUP_STATE_PREV = 9215,
+            ILPT2_LOCK_STATE = 9216,
+            ILPT2_LOCK_STATE_PREV = 9217,
+            GRIPPER_FOUP_STATE = 9250,
+            GRIPPER_FOUP_STATE_PREV = 9251,
+            SHELF_1_STATE = 9300,
+            SHELF_1_STATE_PREV = 9301,
+            SHELF_2_STATE = 9302,
+            SHELF_2_STATE_PREV = 9303,
+            SHELF_3_STATE = 9304,
+            SHELF_3_STATE_PREV = 9305,
+            SHELF_4_STATE = 9306,
+            SHELF_4_STATE_PREV = 9307,
+            SHELF_5_STATE = 9308,
+            SHELF_5_STATE_PREV = 9309,
+            SHELF_6_STATE = 9310,
+            SHELF_6_STATE_PREV = 9311,
+            SHELF_7_STATE = 9312,
+            SHELF_7_STATE_PREV = 9313,
+            SHELF_8_STATE = 9314,
+            SHELF_8_STATE_PREV = 9315,
+            SHELF_9_STATE = 9316,
+            SHELF_9_STATE_PREV = 9317,
+            SHELF_10_STATE = 9318,
+            SHELF_10_STATE_PREV = 9319,
+            SHELF_11_STATE = 9320,
+            SHELF_11_STATE_PREV = 9321,
+            SHELF_12_STATE = 9322,
+            SHELF_12_STATE_PREV = 9323,
+            SHELF_13_STATE = 9324,
+            SHELF_13_STATE_PREV = 9325,
+            SHELF_14_STATE = 9326,
+            SHELF_14_STATE_PREV = 9327,
+            SHELF_15_STATE = 9328,
+            SHELF_15_STATE_PREV = 9329,
+            SHELF_16_STATE = 9330,
+            SHELF_16_STATE_PREV = 9331,
+            SHELF_17_STATE = 9332,
+            SHELF_17_STATE_PREV = 9333,
+            SHELF_18_STATE = 9334,
+            SHELF_18_STATE_PREV = 9335,
+            PROCESS_SUBSTRATE_STATE = 9342,
+            PROCESS_SUBSTRATE_STATE_PREV = 9343,
+            PTZ_STATE = 9344,
+            PTZ_STATE_PREV = 9345,
+            ALIGNER_STATE = 9360,
+            ALIGNER_STATE_PREV = 9361,
+            LIGHT_CURTAIN_STATE = 9400,
+            LIGHT_CURTAIN_STATE_PREV = 9401,
+            ESTOP_STATE = 9402,
+            ESTOP_STATE_PREV = 9403
         }
     }
 }
