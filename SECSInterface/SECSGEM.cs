@@ -212,7 +212,7 @@ namespace SECSInterface
 
         private void axQGWrapper1_QGEvent(int lID, int S, int F, int W_Bit, int SystemBytes, object RawData, int Length) //*new
         {
-
+            
             //object OutputRawData = null;
             //object Value = null;
 
@@ -590,6 +590,16 @@ namespace SECSInterface
                             ReplyAck(Hack.WTS_ILPT_Empty, ulSystemBytes);
                             return;
                         }
+                        if (_Report.GetNode(param["@ToPosition"]).Name.Equals("ILPT1") && (!GetSv(SECS_DV.ILPT1_MAP).Equals("0000000000000000000000000")))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_FULL, ulSystemBytes);
+                            return;
+                        }
+                        if (_Report.GetNode(param["@ToPosition"]).Name.Equals("ILPT2") && (!GetSv(SECS_DV.ILPT2_MAP).Equals("0000000000000000000000000")))
+                        {
+                            ReplyAck(Hack.WTS_ILPT_FULL, ulSystemBytes);
+                            return;
+                        }
                         if (_Report.GetNode(param["@FromPosition"]).Name.Equals("CTU") && !_Report.GetNode(param["@FromPosition"]).R_Presence)
                         {
                             ReplyAck(Hack.WTS_CTU_Empty, ulSystemBytes);
@@ -600,6 +610,7 @@ namespace SECSInterface
                             ReplyAck(Hack.WTS_CTU_Full, ulSystemBytes);
                             return;
                         }
+                        
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.TRANSFER_WTS, param);
                         break;
                     case "STOP_WTS":
@@ -1118,6 +1129,7 @@ namespace SECSInterface
             WTS_ILPT_Door_is_not_Open = 74,
             WTS_Incorrect_PTZ_State = 75,
             WTS_ILPT_Empty = 78,
+            WTS_ILPT_FULL = 79,
             WTS_PTZ_Slot_Empty = 81,
             WTS_PTZ_Slot_Full = 82,
             Stocker_Not_Idle = 84,
@@ -1177,6 +1189,9 @@ namespace SECSInterface
                     break;
                 case QGACTIVEXLib.PP_TYPE.RECEIVE_S2F41_ERROR_RCMD:
 
+                    break;
+                case QGACTIVEXLib.PP_TYPE.SEND_CE_RPT_NAME:
+                    _Report.On_Message_Log("SECS", PPID);
                     break;
             }
         }
@@ -1959,7 +1974,7 @@ namespace SECSInterface
                 g_lOperationResult = axQGWrapper1.UpdateSV((int)State_Prev, ref objTemp);
                 //發Event report
                 axQGWrapper1.EventReportSend((int)Event);
-                _Report.On_Message_Log("SECS", "Event:"+Event.ToString()+" Parameters:"+State.ToString() + ", "+State_Prev.ToString());
+               
             }
         }
         private void ReportEvent(SECS_DV State, SECS_DV State_Prev, SECS_Event Event, string NewState, bool ForceReport = false)
