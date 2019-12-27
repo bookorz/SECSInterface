@@ -414,21 +414,14 @@ namespace SECSInterface
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.ABORT_STOCKER, null);
                         break;
                     case "RESET_STOCKER":
-                        QGACTIVEXLib.SV_DATA_TYPE GetFormat;
-                        object SvVal = null;
-
-                        axQGWrapper1.GetSV((int)SECS_DV.STOCKER_SOURCE, out GetFormat, out SvVal);
-                        param = new Dictionary<string, string>();
-                        param.Add("@Source", SvVal.ToString());
-                        axQGWrapper1.GetSV((int)SECS_DV.STOCKER_DESTINATION, out GetFormat, out SvVal);
-                        param.Add("@Destination", SvVal.ToString());
+                        
                         if (GetSv(SECS_SV.WTS_STATE).Equals("RESETTING"))
                         {
                             ReplyAck(Hack.WTS_is_not_Idle, ulSystemBytes);
                             return;
                         }
 
-                        _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RESET_STOCKER, param);
+                        _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RESET_STOCKER, null);
                         break;
                     case "OPEN_FOUP":
                         param = new Dictionary<string, string>();
@@ -784,6 +777,19 @@ namespace SECSInterface
                         param = new Dictionary<string, string>();
                         param.Add("@Target", remoteCmd.GetCPValue("PORT"));
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RESET_E84, param);
+                        break;
+                    case "E84_MODE":
+                        param = new Dictionary<string, string>();
+                        param.Add("@Target","E84_"+ remoteCmd.GetCPValue("PORT"));
+                        param.Add("@Value", remoteCmd.GetCPValue("ACCESS"));
+                        _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.E84_MODE, param);
+                        ReplyAck(Hack.Command_has_been_performed, ulSystemBytes);
+                        break;
+                    case "LIGHT_CURTAIN":
+                        param = new Dictionary<string, string>();
+                        param.Add("@Value", remoteCmd.GetCPValue("FUNCTION").Equals("ENABLE")?"1":"0");
+                        _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.LIGHT_CURTAIN_ENABLED, param);
+                        ReplyAck(Hack.Command_has_been_performed, ulSystemBytes);
                         break;
                 }
             }
@@ -1247,8 +1253,26 @@ namespace SECSInterface
         public void On_TaskJob_Finished(TaskFlowManagement.CurrentProcessTask Task)
         {
             Node Shelf = null;
+            Dictionary<string, string> param = null;
             switch (Task.TaskName)
             {
+                case TaskFlowManagement.Command.E84_MODE:
+                    if (Task.Params["@Value"].Equals("AUTO"))
+                    {
+                        param = new Dictionary<string, string>();
+                        param.Add("@Slot", Task.Params["@Target"] + "-IND-Auto");
+                        param.Add("@Value", "1");
+                        _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+
+                    }
+                    else
+                    {
+                        param = new Dictionary<string, string>();
+                        param.Add("@Slot", Task.Params["@Target"] + "-IND-Auto");
+                        param.Add("@Value", "0");
+                        _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                    }
+                    break;
                 case TaskFlowManagement.Command.PORT_ACCESS_MODE:
                     if (Task.Params["@Target"].Equals("ILPT1"))
                     {
@@ -1371,20 +1395,53 @@ namespace SECSInterface
                                 if (item.Value.Equals("1"))
                                 {
                                     ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_UNLOAD");
+                                    //param = new Dictionary<string, string>();
+                                    //param.Add("@Slot", "ELPT1-IND-Unload");
+                                    //param.Add("@Value", "1");
+                                    //_Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    //param = new Dictionary<string, string>();
+                                    //param.Add("@Slot", "ELPT1-IND-Load");
+                                    //param.Add("@Value", "0");
+                                    //_Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
                                 }
                                 else
                                 {
                                     ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_LOAD");
+
+                                    //param = new Dictionary<string, string>();
+                                    //param.Add("@Slot", "ELPT1-IND-Unload");
+                                    //param.Add("@Value", "0");
+                                    //_Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    //param = new Dictionary<string, string>();
+                                    //param.Add("@Slot", "ELPT1-IND-Load");
+                                    //param.Add("@Value", "1");
+                                    //_Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
                                 }
                                 break;
                             case "ELPT2":
                                 if (item.Value.Equals("1"))
                                 {
                                     ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_UNLOAD");
+                                    //param = new Dictionary<string, string>();
+                                    //param.Add("@Slot", "ELPT2-IND-Unload");
+                                    //param.Add("@Value", "1");
+                                    //_Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    //param = new Dictionary<string, string>();
+                                    //param.Add("@Slot", "ELPT2-IND-Load");
+                                    //param.Add("@Value", "0");
+                                    //_Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
                                 }
                                 else
                                 {
                                     ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_LOAD");
+                                    //param = new Dictionary<string, string>();
+                                    //param.Add("@Slot", "ELPT2-IND-Unload");
+                                    //param.Add("@Value", "0");
+                                    //_Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    //param = new Dictionary<string, string>();
+                                    //param.Add("@Slot", "ELPT2-IND-Load");
+                                    //param.Add("@Value", "1");
+                                    //_Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
                                 }
                                 break;
                             default:
@@ -1974,6 +2031,62 @@ namespace SECSInterface
                 g_lOperationResult = axQGWrapper1.UpdateSV((int)State_Prev, ref objTemp);
                 //發Event report
                 axQGWrapper1.EventReportSend((int)Event);
+                Dictionary<string, string> param = null;
+                switch (State)
+                {
+                    case SECS_SV.ELPT1_FOUP_STATE:
+                        if (NewState.Equals("READY_TO_LOAD"))
+                        {
+                           
+                                param = new Dictionary<string, string>();
+                                param.Add("@Slot", "ELPT1-IND-Load");
+                                param.Add("@Value", "1");
+                                TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                param = new Dictionary<string, string>();
+                                param.Add("@Slot", "ELPT1-IND-Unload");
+                                param.Add("@Value", "0");
+                                TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                           
+                        }
+                        else if (NewState.Equals("READY_TO_UNLOAD"))
+                        {
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT1-IND-Load");
+                            param.Add("@Value", "0");
+                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT1-IND-Unload");
+                            param.Add("@Value", "1");
+                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                        }
+                        break;
+                    case SECS_SV.ELPT2_FOUP_STATE:
+                        if (NewState.Equals("READY_TO_LOAD"))
+                        {
+
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Load");
+                            param.Add("@Value", "1");
+                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Unload");
+                            param.Add("@Value", "0");
+                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+
+                        }
+                        else if (NewState.Equals("READY_TO_UNLOAD"))
+                        {
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Load");
+                            param.Add("@Value", "0");
+                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Unload");
+                            param.Add("@Value", "1");
+                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                        }
+                        break;
+                }
                
             }
         }
@@ -2063,6 +2176,26 @@ namespace SECSInterface
                             break;
                         case "PTZ-Present":
 
+                            break;
+                        case "STK-Inform-EMS":
+                            if (IO_State["STK-Inform-EMS"].Equals("1"))
+                            {
+                                ReportEvent(SECS_SV.ESTOP_STATE, SECS_SV.ESTOP_STATE_PREV, SECS_Event.ESTOP_State_Change, "INTERRUPTED");
+                            }
+                            else
+                            {
+                                ReportEvent(SECS_SV.ESTOP_STATE, SECS_SV.ESTOP_STATE_PREV, SECS_Event.ESTOP_State_Change, "CLEAR");
+                            }
+                            break;
+                        case "LightCurtain-In2":
+                            if (IO_State["LightCurtain-In2"].Equals("1"))
+                            {
+                                ReportEvent(SECS_SV.LIGHT_CURTAIN_STATE, SECS_SV.LIGHT_CURTAIN_STATE_PREV, SECS_Event.Light_Curtain_State_Change, "INTERRUPTED");
+                            }
+                            else
+                            {
+                                ReportEvent(SECS_SV.LIGHT_CURTAIN_STATE, SECS_SV.LIGHT_CURTAIN_STATE_PREV, SECS_Event.Light_Curtain_State_Change, "CLEAR");
+                            }
                             break;
                         case "ELPT1-R-POS-Clamp":
                         case "ELPT1-L-POS-Clamp":
