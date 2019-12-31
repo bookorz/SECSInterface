@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using TransferControl.CommandConvert;
 using TransferControl.Engine;
@@ -212,7 +213,7 @@ namespace SECSInterface
 
         private void axQGWrapper1_QGEvent(int lID, int S, int F, int W_Bit, int SystemBytes, object RawData, int Length) //*new
         {
-            
+
             //object OutputRawData = null;
             //object Value = null;
 
@@ -228,8 +229,8 @@ namespace SECSInterface
         //private void axQSWrapper1_QSEvent(object sender, AxQSACTIVEXLib._IQSWrapperEvents_QSEventEvent e) //*old
         private void axQSWrapper1_QSEvent(int lID, EVENT_ID lMsgID, int S, int F, int W_Bit, int ulSystemBytes, object RawData, object Head, string pEventText) //*new
         {
-            //QGACTIVEXLib.SV_DATA_TYPE GetFormat;
-            //object SvVal = null;
+            QGACTIVEXLib.EC_DATA_TYPE GetFormat;
+            object ECVal = null;
             //object OutputRawData = null;
             //object tmp = null;
             //object Value = null;
@@ -266,7 +267,7 @@ namespace SECSInterface
             {
                 _Report.On_Message_Log("SECS", pEventText);
                 _Report.On_Message_Log("SECS", ShowSECSIIMessage(RawData));
-                
+
             }
             if (lResult == QGACTIVEXLib.PROCESS_MSG_RESULT.REPLY_BY_AP && S == 2 && F == 41)
             {
@@ -414,7 +415,7 @@ namespace SECSInterface
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.ABORT_STOCKER, null);
                         break;
                     case "RESET_STOCKER":
-                        
+
                         if (GetSv(SECS_SV.WTS_STATE).Equals("RESETTING"))
                         {
                             ReplyAck(Hack.WTS_is_not_Idle, ulSystemBytes);
@@ -603,7 +604,7 @@ namespace SECSInterface
                             ReplyAck(Hack.WTS_CTU_Full, ulSystemBytes);
                             return;
                         }
-                        
+
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.TRANSFER_WTS, param);
                         break;
                     case "STOP_WTS":
@@ -775,19 +776,31 @@ namespace SECSInterface
                         break;
                     case "RESET_E84":
                         param = new Dictionary<string, string>();
-                        param.Add("@Target", remoteCmd.GetCPValue("PORT"));
+                        param.Add("@Target", "E84_"+remoteCmd.GetCPValue("PORT"));
+                        axQGWrapper1.GetEC(2510, out GetFormat, out ECVal);
+                        param.Add("@TP1", ECVal.ToString());
+                        axQGWrapper1.GetEC(2511, out GetFormat, out ECVal);
+                        param.Add("@TP2", ECVal.ToString());
+                        axQGWrapper1.GetEC(2512, out GetFormat, out ECVal);
+                        param.Add("@TP3", ECVal.ToString());
+                        axQGWrapper1.GetEC(2513, out GetFormat, out ECVal);
+                        param.Add("@TP4", ECVal.ToString());
+                        axQGWrapper1.GetEC(2514, out GetFormat, out ECVal);
+                        param.Add("@TP5", ECVal.ToString());
+                        axQGWrapper1.GetEC(2515, out GetFormat, out ECVal);
+                        param.Add("@TP6", ECVal.ToString());
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.RESET_E84, param);
                         break;
                     case "E84_MODE":
                         param = new Dictionary<string, string>();
-                        param.Add("@Target","E84_"+ remoteCmd.GetCPValue("PORT"));
+                        param.Add("@Target", "E84_" + remoteCmd.GetCPValue("PORT"));
                         param.Add("@Value", remoteCmd.GetCPValue("ACCESS"));
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.E84_MODE, param);
                         ReplyAck(Hack.Command_has_been_performed, ulSystemBytes);
                         break;
                     case "LIGHT_CURTAIN":
                         param = new Dictionary<string, string>();
-                        param.Add("@Value", remoteCmd.GetCPValue("FUNCTION").Equals("ENABLE")?"1":"0");
+                        param.Add("@Value", remoteCmd.GetCPValue("FUNCTION").Equals("ENABLE") ? "1" : "0");
                         _Report.NewTask(ulSystemBytes.ToString(), TaskFlowManagement.Command.LIGHT_CURTAIN_ENABLED, param);
                         ReplyAck(Hack.Command_has_been_performed, ulSystemBytes);
                         break;
@@ -1735,8 +1748,8 @@ namespace SECSInterface
                             {
                                 ReportEvent(SECS_SV.PTZ_STATE, SECS_SV.PTZ_STATE_PREV, SECS_Event.PTZ_State_Change, "LOADING");
                             }
-                  
-                            
+
+
                             break;
                         case Transaction.Command.CTU.Pick:
                             if (Txn.Position.Equals("PTZ"))
@@ -2004,6 +2017,70 @@ namespace SECSInterface
                 object objTemp;
                 QGACTIVEXLib.SV_DATA_TYPE GetFormat;
                 object SvVal = null;
+                Dictionary<string, string> param = null;
+                switch (State)
+                {
+                    case SECS_SV.ELPT1_FOUP_STATE:
+                        if (NewState.Equals("READY_TO_LOAD"))
+                        {
+
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT1-IND-Load");
+                            param.Add("@Value", "1");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                           // SpinWait.SpinUntil(() => false, 200);
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT1-IND-Unload");
+                            param.Add("@Value", "0");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                           // SpinWait.SpinUntil(() => false, 200);
+
+                        }
+                        else if (NewState.Equals("READY_TO_UNLOAD"))
+                        {
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT1-IND-Load");
+                            param.Add("@Value", "0");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                           // SpinWait.SpinUntil(() => false, 200);
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT1-IND-Unload");
+                            param.Add("@Value", "1");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                            //SpinWait.SpinUntil(() => false, 200);
+                        }
+                        break;
+                    case SECS_SV.ELPT2_FOUP_STATE:
+                        if (NewState.Equals("READY_TO_LOAD"))
+                        {
+
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Load");
+                            param.Add("@Value", "1");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                           // SpinWait.SpinUntil(() => false, 200);
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Unload");
+                            param.Add("@Value", "0");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                           // SpinWait.SpinUntil(() => false, 200);
+
+                        }
+                        else if (NewState.Equals("READY_TO_UNLOAD"))
+                        {
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Load");
+                            param.Add("@Value", "0");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                           // SpinWait.SpinUntil(() => false, 200);
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Unload");
+                            param.Add("@Value", "1");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                           // SpinWait.SpinUntil(() => false, 200);
+                        }
+                        break;
+                }
                 //取得目前狀態
 
                 axQGWrapper1.GetSV((int)State, out GetFormat, out SvVal);
@@ -2031,63 +2108,8 @@ namespace SECSInterface
                 g_lOperationResult = axQGWrapper1.UpdateSV((int)State_Prev, ref objTemp);
                 //發Event report
                 axQGWrapper1.EventReportSend((int)Event);
-                Dictionary<string, string> param = null;
-                switch (State)
-                {
-                    case SECS_SV.ELPT1_FOUP_STATE:
-                        if (NewState.Equals("READY_TO_LOAD"))
-                        {
-                           
-                                param = new Dictionary<string, string>();
-                                param.Add("@Slot", "ELPT1-IND-Load");
-                                param.Add("@Value", "1");
-                                TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
-                                param = new Dictionary<string, string>();
-                                param.Add("@Slot", "ELPT1-IND-Unload");
-                                param.Add("@Value", "0");
-                                TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
-                           
-                        }
-                        else if (NewState.Equals("READY_TO_UNLOAD"))
-                        {
-                            param = new Dictionary<string, string>();
-                            param.Add("@Slot", "ELPT1-IND-Load");
-                            param.Add("@Value", "0");
-                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
-                            param = new Dictionary<string, string>();
-                            param.Add("@Slot", "ELPT1-IND-Unload");
-                            param.Add("@Value", "1");
-                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
-                        }
-                        break;
-                    case SECS_SV.ELPT2_FOUP_STATE:
-                        if (NewState.Equals("READY_TO_LOAD"))
-                        {
+                
 
-                            param = new Dictionary<string, string>();
-                            param.Add("@Slot", "ELPT2-IND-Load");
-                            param.Add("@Value", "1");
-                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
-                            param = new Dictionary<string, string>();
-                            param.Add("@Slot", "ELPT2-IND-Unload");
-                            param.Add("@Value", "0");
-                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
-
-                        }
-                        else if (NewState.Equals("READY_TO_UNLOAD"))
-                        {
-                            param = new Dictionary<string, string>();
-                            param.Add("@Slot", "ELPT2-IND-Load");
-                            param.Add("@Value", "0");
-                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
-                            param = new Dictionary<string, string>();
-                            param.Add("@Slot", "ELPT2-IND-Unload");
-                            param.Add("@Value", "1");
-                            TaskFlowManagement.Excute(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
-                        }
-                        break;
-                }
-               
             }
         }
         private void ReportEvent(SECS_DV State, SECS_DV State_Prev, SECS_Event Event, string NewState, bool ForceReport = false)
@@ -2124,7 +2146,7 @@ namespace SECSInterface
                 g_lOperationResult = axQGWrapper1.UpdateSV((int)State_Prev, ref objTemp);
                 //發Event report
                 axQGWrapper1.EventReportSend((int)Event);
-               
+
             }
         }
         public void On_Command_TimeOut(Node Node, Transaction Txn)
@@ -2482,77 +2504,77 @@ namespace SECSInterface
         enum SECS_Event
         {
             Stocker_State_Change = 5001,
-             WTS_State_Change = 5002,
-             System_Mode_Change = 5004,
-             Stocker_Source_Change = 5006,
-             Stocker_Destination_Change = 5008,
-             ELPT1_Mode_Change = 5100,
-             ELPT1_FOUP_State_Change = 5102,
-             ELPT1_LOCK_State_Change = 5104,
-             ELPT2_Mode_Change = 5110,
-             ELPT2_FOUP_State_Change = 5112,
-             ELPT2_LOCK_State_Change = 5114,
-             ILPT1_Mode_Change = 5200,
-             ILPT1_FOUP_State_Change = 5202,
-             ILPT1_LOCK_State_Change = 5204,
-             ILPT2_Mode_Change = 5210,
-             ILPT2_FOUP_State_Change = 5212,
-             ILPT2_LOCK_State_Change = 5214,
-             Gripper_FOUP_State_Change = 5250,
-             Shelf_1_State_Change = 5300,
-             Shelf_2_State_Change = 5302,
-             Shelf_3_State_Change = 5304,
-             Shelf_4_State_Change = 5306,
-             Shelf_5_State_Change = 5308,
-             Shelf_6_State_Change = 5310,
-             Shelf_7_State_Change = 5312,
-             Shelf_8_State_Change = 5314,
-             Shelf_9_State_Change = 5316,
-             Shelf_10_State_Change = 5318,
-             Shelf_11_State_Change = 5320,
-             Shelf_12_State_Change = 5322,
-             Shelf_13_State_Change = 5324,
-             Shelf_14_State_Change = 5326,
-             Shelf_15_State_Change = 5328,
-             Shelf_16_State_Change = 5330,
-             Shelf_17_State_Change = 5332,
-             Shelf_18_State_Change = 5334,
-             PTZ_State_Change = 5340,
-             Process_Carrier_WTS_State_Change = 5344,
-             ELPT1_ID_Available = 5520,
-             ELPT2_ID_Available = 5521,
-             ILPT1_ID_Available = 5522,
-             ILPT2_ID_Available = 5523,
-             ILPT1_Wafer_Map_Available = 5530,
-             ILPT2_Wafer_Map_Available = 5531,
-             PTZ_Map_Available = 5532,
-             ALIGNER_State_Change = 5551,
-             Process_Substrate_State_Change = 5552,
-             Light_Curtain_State_Change = 5600,
-             ESTOP_State_Change = 5602
+            WTS_State_Change = 5002,
+            System_Mode_Change = 5004,
+            Stocker_Source_Change = 5006,
+            Stocker_Destination_Change = 5008,
+            ELPT1_Mode_Change = 5100,
+            ELPT1_FOUP_State_Change = 5102,
+            ELPT1_LOCK_State_Change = 5104,
+            ELPT2_Mode_Change = 5110,
+            ELPT2_FOUP_State_Change = 5112,
+            ELPT2_LOCK_State_Change = 5114,
+            ILPT1_Mode_Change = 5200,
+            ILPT1_FOUP_State_Change = 5202,
+            ILPT1_LOCK_State_Change = 5204,
+            ILPT2_Mode_Change = 5210,
+            ILPT2_FOUP_State_Change = 5212,
+            ILPT2_LOCK_State_Change = 5214,
+            Gripper_FOUP_State_Change = 5250,
+            Shelf_1_State_Change = 5300,
+            Shelf_2_State_Change = 5302,
+            Shelf_3_State_Change = 5304,
+            Shelf_4_State_Change = 5306,
+            Shelf_5_State_Change = 5308,
+            Shelf_6_State_Change = 5310,
+            Shelf_7_State_Change = 5312,
+            Shelf_8_State_Change = 5314,
+            Shelf_9_State_Change = 5316,
+            Shelf_10_State_Change = 5318,
+            Shelf_11_State_Change = 5320,
+            Shelf_12_State_Change = 5322,
+            Shelf_13_State_Change = 5324,
+            Shelf_14_State_Change = 5326,
+            Shelf_15_State_Change = 5328,
+            Shelf_16_State_Change = 5330,
+            Shelf_17_State_Change = 5332,
+            Shelf_18_State_Change = 5334,
+            PTZ_State_Change = 5340,
+            Process_Carrier_WTS_State_Change = 5344,
+            ELPT1_ID_Available = 5520,
+            ELPT2_ID_Available = 5521,
+            ILPT1_ID_Available = 5522,
+            ILPT2_ID_Available = 5523,
+            ILPT1_Wafer_Map_Available = 5530,
+            ILPT2_Wafer_Map_Available = 5531,
+            PTZ_Map_Available = 5532,
+            ALIGNER_State_Change = 5551,
+            Process_Substrate_State_Change = 5552,
+            Light_Curtain_State_Change = 5600,
+            ESTOP_State_Change = 5602
         }
         enum SECS_DV
         {
             ELPT1_FOUP_ID = 7000,
-             ELPT1_FOUP_ID_PREV = 7001,
-             ELPT2_FOUP_ID = 7002,
-             ELPT2_FOUP_ID_PREV = 7003,
-             ILPT1_FOUP_ID = 7010,
-             ILPT1_FOUP_ID_PREV = 7011,
-             ILPT2_FOUP_ID = 7012,
-             ILPT2_FOUP_ID_PREV = 7013,
-             ILPT1_MAP = 7020,
-             ILPT1_MAP_PREV = 7021,
-             ILPT2_MAP = 7022,
-             ILPT2_MAP_PREV = 7023,
-             PTZ_MAP = 7030,
-             PTZ_MAP_PREV = 7031,
-             STOCKER_SOURCE = 7040,
-             STOCKER_SOURCE_PREV = 7041,
-             STOCKER_DESTINATION = 7050,
-             STOCKER_DESTINATION_PREV = 7051,
-             SYSTEM_MODE = 7060,
-             SYSTEM_MODE_PREV = 7061
+            ELPT1_FOUP_ID_PREV = 7001,
+            ELPT2_FOUP_ID = 7002,
+            ELPT2_FOUP_ID_PREV = 7003,
+            ILPT1_FOUP_ID = 7010,
+            ILPT1_FOUP_ID_PREV = 7011,
+            ILPT2_FOUP_ID = 7012,
+            ILPT2_FOUP_ID_PREV = 7013,
+            ILPT1_MAP = 7020,
+            ILPT1_MAP_PREV = 7021,
+            ILPT2_MAP = 7022,
+            ILPT2_MAP_PREV = 7023,
+            PTZ_MAP = 7030,
+            PTZ_MAP_PREV = 7031,
+            STOCKER_SOURCE = 7040,
+            STOCKER_SOURCE_PREV = 7041,
+            STOCKER_DESTINATION = 7050,
+            STOCKER_DESTINATION_PREV = 7051,
+            SYSTEM_MODE = 7060,
+            SYSTEM_MODE_PREV = 7061
         }
         enum SECS_SV
         {
