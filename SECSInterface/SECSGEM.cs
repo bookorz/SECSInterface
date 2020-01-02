@@ -1273,7 +1273,7 @@ namespace SECSInterface
                     if (Task.Params["@Value"].Equals("AUTO"))
                     {
                         param = new Dictionary<string, string>();
-                        param.Add("@Slot", Task.Params["@Target"] + "-IND-Auto");
+                        param.Add("@Slot", Task.Params["@Target"].Replace("E84_","") + "-IND-Auto");
                         param.Add("@Value", "1");
                         _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
 
@@ -1281,7 +1281,7 @@ namespace SECSInterface
                     else
                     {
                         param = new Dictionary<string, string>();
-                        param.Add("@Slot", Task.Params["@Target"] + "-IND-Auto");
+                        param.Add("@Slot", Task.Params["@Target"].Replace("E84_", "") + "-IND-Auto");
                         param.Add("@Value", "0");
                         _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
                     }
@@ -2049,6 +2049,20 @@ namespace SECSInterface
                             _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
                             //SpinWait.SpinUntil(() => false, 200);
                         }
+                        if (NewState.Equals("ALARM"))
+                        {
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT1-IND-Alarm");
+                            param.Add("@Value", "1");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                        }
+                        else
+                        {
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT1-IND-Alarm");
+                            param.Add("@Value", "0");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                        }
                         break;
                     case SECS_SV.ELPT2_FOUP_STATE:
                         if (NewState.Equals("READY_TO_LOAD"))
@@ -2078,6 +2092,20 @@ namespace SECSInterface
                             param.Add("@Value", "1");
                             _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
                            // SpinWait.SpinUntil(() => false, 200);
+                        }
+                        if (NewState.Equals("ALARM"))
+                        {
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Alarm");
+                            param.Add("@Value", "1");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                        }
+                        else
+                        {
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Alarm");
+                            param.Add("@Value", "0");
+                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
                         }
                         break;
                 }
@@ -2177,7 +2205,7 @@ namespace SECSInterface
                 string IO_Name = Msg.Value.Split(',')[0];
                 string IO_Value = Msg.Value.Split(',')[1];
                 Dictionary<string, string> param = new Dictionary<string, string>();
-
+                Node node = null;
                 lock (IO_State)
                 {
                     bool chk = false;
@@ -2193,6 +2221,272 @@ namespace SECSInterface
 
                     switch (IO_Name)
                     {
+                        case "ELPT1-Place1":
+                        case "ELPT1-Place2":
+                        case "ELPT1-Place3":
+                        case "ELPT1-Present":
+                            if (IO_State.ContainsKey("ELPT1-Place1") && IO_State.ContainsKey("ELPT1-Place2") && IO_State.ContainsKey("ELPT1-Place3") && IO_State.ContainsKey("ELPT1-Present"))
+                            {
+                                param = new Dictionary<string, string>();
+                                param.Add("@Slot", "ELPT1-IND-Presence");
+                                if (IO_State["ELPT1-Place1"].Equals("1") || IO_State["ELPT1-Place2"].Equals("1") || IO_State["ELPT1-Place3"].Equals("1") || IO_State["ELPT1-Present"].Equals("1"))
+                                {
+                                    param.Add("@Value", "1");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                }
+                                else
+                                {
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                }
+                            }
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT1-IND-Placement");
+
+                            if (IO_State.ContainsKey("ELPT1-Place1") && IO_State.ContainsKey("ELPT1-Place2") && IO_State.ContainsKey("ELPT1-Place3"))
+                            {
+                                if (IO_State["ELPT1-Place1"].Equals("1") && IO_State["ELPT1-Place2"].Equals("1") && IO_State["ELPT1-Place3"].Equals("1"))
+                                {
+                                    param.Add("@Value", "1");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT1-IND-Load");
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT1-IND-Unload");
+                                    param.Add("@Value", "1");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                   
+                                }
+                                else
+                                {
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT1-IND-Load");
+                                    param.Add("@Value", "1");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT1-IND-Unload");
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    
+                                }
+
+                            }
+                            break;
+                        case "ELPT1-R-POS-Clamp":
+                        case "ELPT1-L-POS-Clamp":
+                        case "ELPT1-R-POS-Unclamp":
+                        case "ELPT1-L-POS-Unclamp":
+
+
+                            if (IO_State.ContainsKey("ELPT1-R-POS-Clamp") && IO_State.ContainsKey("ELPT1-L-POS-Clamp") && IO_State.ContainsKey("ELPT1-R-POS-Unclamp") && IO_State.ContainsKey("ELPT1-L-POS-Unclamp"))
+                            {
+                                param = new Dictionary<string, string>();
+                                param.Add("@Slot", "ELPT1-IND-Clamp");
+                                if (IO_State["ELPT1-R-POS-Clamp"].Equals("1") && IO_State["ELPT1-L-POS-Clamp"].Equals("1"))
+                                {
+                                    param.Add("@Value", "1");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT1-IND-Load");
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT1-IND-Unload");
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                }
+                                else
+                                {
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    if (IO_State.ContainsKey("ELPT1-Place1") && IO_State.ContainsKey("ELPT1-Place2") && IO_State.ContainsKey("ELPT1-Place3"))
+                                    {
+                                        if (IO_State["ELPT1-Place1"].Equals("1") && IO_State["ELPT1-Place2"].Equals("1") && IO_State["ELPT1-Place3"].Equals("1"))
+                                        {
+
+                                            param = new Dictionary<string, string>();
+                                            param.Add("@Slot", "ELPT1-IND-Load");
+                                            param.Add("@Value", "0");
+                                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                            param = new Dictionary<string, string>();
+                                            param.Add("@Slot", "ELPT1-IND-Unload");
+                                            param.Add("@Value", "1");
+                                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                        }
+                                        else
+                                        {
+
+                                            param = new Dictionary<string, string>();
+                                            param.Add("@Slot", "ELPT1-IND-Load");
+                                            param.Add("@Value", "1");
+                                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                            param = new Dictionary<string, string>();
+                                            param.Add("@Slot", "ELPT1-IND-Unload");
+                                            param.Add("@Value", "0");
+                                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                        }
+
+                                    }
+                                }
+
+
+                            }
+                            if (IO_State.ContainsKey("ELPT1-R-POS-Clamp") && IO_State.ContainsKey("ELPT1-L-POS-Clamp") && IO_State.ContainsKey("ELPT1-R-POS-Unclamp") && IO_State.ContainsKey("ELPT1-L-POS-Unclamp"))
+                            {
+                                if (IO_State["ELPT1-R-POS-Clamp"].Equals("0") && IO_State["ELPT1-L-POS-Clamp"].Equals("0") && IO_State["ELPT1-R-POS-Unclamp"].Equals("0") && IO_State["ELPT1-L-POS-Unclamp"].Equals("0"))
+                                {
+                                    ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "MID");
+                                }
+                                else if (IO_State["ELPT1-R-POS-Clamp"].Equals("1") && IO_State["ELPT1-L-POS-Clamp"].Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "LOCKED");
+                                }
+                                else if (IO_State["ELPT1-R-POS-Clamp"].Equals("0") && IO_State["ELPT1-L-POS-Clamp"].Equals("0"))
+                                {
+                                    ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "UNLOCKED");
+                                }
+                            }
+
+                            break;
+                        case "ELPT2-Place1":
+                        case "ELPT2-Place2":
+                        case "ELPT2-Place3":
+                        case "ELPT2-Present":
+                            if (IO_State.ContainsKey("ELPT2-Place1") && IO_State.ContainsKey("ELPT2-Place2") && IO_State.ContainsKey("ELPT2-Place3") && IO_State.ContainsKey("ELPT2-Present"))
+                            {
+                                param = new Dictionary<string, string>();
+                                param.Add("@Slot", "ELPT2-IND-Presence");
+                                if (IO_State["ELPT2-Place1"].Equals("1") || IO_State["ELPT2-Place2"].Equals("1") || IO_State["ELPT2-Place3"].Equals("1") || IO_State["ELPT2-Present"].Equals("1"))
+                                {
+                                    param.Add("@Value", "1");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                }
+                                else
+                                {
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                }
+                            }
+                            param = new Dictionary<string, string>();
+                            param.Add("@Slot", "ELPT2-IND-Placement");
+
+                            if (IO_State.ContainsKey("ELPT2-Place1") && IO_State.ContainsKey("ELPT2-Place2") && IO_State.ContainsKey("ELPT2-Place3"))
+                            {
+                                if (IO_State["ELPT2-Place1"].Equals("1") && IO_State["ELPT2-Place2"].Equals("1") && IO_State["ELPT2-Place3"].Equals("1"))
+                                {
+                                    param.Add("@Value", "1");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT2-IND-Load");
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT2-IND-Unload");
+                                    param.Add("@Value", "1");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                   
+                                }
+                                else
+                                {
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT2-IND-Load");
+                                    param.Add("@Value", "1");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT2-IND-Unload");
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                   
+                                }
+
+                            }
+                            break;
+                        case "ELPT2-R-POS-Clamp":
+                        case "ELPT2-L-POS-Clamp":
+                        case "ELPT2-R-POS-Unclamp":
+                        case "ELPT2-L-POS-Unclamp":
+
+
+                            if (IO_State.ContainsKey("ELPT2-R-POS-Clamp") && IO_State.ContainsKey("ELPT2-L-POS-Clamp") && IO_State.ContainsKey("ELPT2-R-POS-Unclamp") && IO_State.ContainsKey("ELPT2-L-POS-Unclamp"))
+                            {
+                                param = new Dictionary<string, string>();
+                                param.Add("@Slot", "ELPT2-IND-Clamp");
+                                if (IO_State["ELPT2-R-POS-Clamp"].Equals("1") && IO_State["ELPT2-L-POS-Clamp"].Equals("1"))
+                                {
+                                    param.Add("@Value", "1");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT2-IND-Load");
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    param = new Dictionary<string, string>();
+                                    param.Add("@Slot", "ELPT2-IND-Unload");
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                }
+                                else
+                                {
+                                    param.Add("@Value", "0");
+                                    _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                    if (IO_State.ContainsKey("ELPT2-Place1") && IO_State.ContainsKey("ELPT2-Place2") && IO_State.ContainsKey("ELPT2-Place3"))
+                                    {
+                                        if (IO_State["ELPT2-Place1"].Equals("1") && IO_State["ELPT2-Place2"].Equals("1") && IO_State["ELPT2-Place3"].Equals("1"))
+                                        {
+
+                                            param = new Dictionary<string, string>();
+                                            param.Add("@Slot", "ELPT2-IND-Load");
+                                            param.Add("@Value", "0");
+                                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                            param = new Dictionary<string, string>();
+                                            param.Add("@Slot", "ELPT2-IND-Unload");
+                                            param.Add("@Value", "1");
+                                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                        }
+                                        else
+                                        {
+
+                                            param = new Dictionary<string, string>();
+                                            param.Add("@Slot", "ELPT2-IND-Load");
+                                            param.Add("@Value", "1");
+                                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                            param = new Dictionary<string, string>();
+                                            param.Add("@Slot", "ELPT2-IND-Unload");
+                                            param.Add("@Value", "0");
+                                            _Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.SET_IO, param);
+                                        }
+
+                                    }
+                                }
+
+
+                            }
+
+                            if (IO_State.ContainsKey("ELPT2-R-POS-Clamp") && IO_State.ContainsKey("ELPT2-L-POS-Clamp") && IO_State.ContainsKey("ELPT2-R-POS-Unclamp") && IO_State.ContainsKey("ELPT2-L-POS-Unclamp"))
+                            {
+                                if (IO_State["ELPT2-R-POS-Clamp"].Equals("0") && IO_State["ELPT2-L-POS-Clamp"].Equals("0") && IO_State["ELPT2-R-POS-Unclamp"].Equals("0") && IO_State["ELPT2-L-POS-Unclamp"].Equals("0"))
+                                {
+                                    ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "MID");
+                                }
+                                else if (IO_State["ELPT2-R-POS-Clamp"].Equals("1") && IO_State["ELPT2-L-POS-Clamp"].Equals("1"))
+                                {
+                                    ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "LOCKED");
+                                }
+                                else if (IO_State["ELPT2-R-POS-Clamp"].Equals("0") && IO_State["ELPT2-L-POS-Clamp"].Equals("0"))
+                                {
+                                    ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "UNLOCKED");
+                                }
+                            }
+                            break;
                         case "CTU-Present":
 
                             break;
@@ -2218,59 +2512,6 @@ namespace SECSInterface
                             {
                                 ReportEvent(SECS_SV.LIGHT_CURTAIN_STATE, SECS_SV.LIGHT_CURTAIN_STATE_PREV, SECS_Event.Light_Curtain_State_Change, "CLEAR");
                             }
-                            break;
-                        case "ELPT1-R-POS-Clamp":
-                        case "ELPT1-L-POS-Clamp":
-                        case "ELPT1-R-POS-Unclamp":
-                        case "ELPT1-L-POS-Unclamp":
-
-
-                            if (IO_State.ContainsKey("ELPT1-R-POS-Clamp") && IO_State.ContainsKey("ELPT1-L-POS-Clamp") && IO_State.ContainsKey("ELPT1-R-POS-Unclamp") && IO_State.ContainsKey("ELPT1-L-POS-Unclamp"))
-                            {
-                                if (IO_State["ELPT1-R-POS-Clamp"].Equals("0") && IO_State["ELPT1-L-POS-Clamp"].Equals("0") && IO_State["ELPT1-R-POS-Unclamp"].Equals("0") && IO_State["ELPT1-L-POS-Unclamp"].Equals("0"))
-                                {
-                                    ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "MID");
-                                }
-                                else if (IO_State["ELPT1-R-POS-Clamp"].Equals("1") && IO_State["ELPT1-L-POS-Clamp"].Equals("1"))
-                                {
-                                    ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "LOCKED");
-                                }
-                                else if (IO_State["ELPT1-R-POS-Clamp"].Equals("0") && IO_State["ELPT1-L-POS-Clamp"].Equals("0"))
-                                {
-                                    ReportEvent(SECS_SV.ELPT1_LOCK_STATE, SECS_SV.ELPT1_LOCK_STATE_PREV, SECS_Event.ELPT1_LOCK_State_Change, "UNLOCKED");
-                                }
-                            }
-
-
-
-
-                            break;
-                        case "ELPT2-R-POS-Clamp":
-                        case "ELPT2-L-POS-Clamp":
-                        case "ELPT2-R-POS-Unclamp":
-                        case "ELPT2-L-POS-Unclamp":
-
-
-
-                            if (IO_State.ContainsKey("ELPT2-R-POS-Clamp") && IO_State.ContainsKey("ELPT2-L-POS-Clamp") && IO_State.ContainsKey("ELPT2-R-POS-Unclamp") && IO_State.ContainsKey("ELPT2-L-POS-Unclamp"))
-                            {
-                                if (IO_State["ELPT2-R-POS-Clamp"].Equals("0") && IO_State["ELPT2-L-POS-Clamp"].Equals("0") && IO_State["ELPT2-R-POS-Unclamp"].Equals("0") && IO_State["ELPT2-L-POS-Unclamp"].Equals("0"))
-                                {
-                                    ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "MID");
-                                }
-                                else if (IO_State["ELPT2-R-POS-Clamp"].Equals("1") && IO_State["ELPT2-L-POS-Clamp"].Equals("1"))
-                                {
-                                    ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "LOCKED");
-                                }
-                                else if (IO_State["ELPT2-R-POS-Clamp"].Equals("0") && IO_State["ELPT2-L-POS-Clamp"].Equals("0"))
-                                {
-                                    ReportEvent(SECS_SV.ELPT2_LOCK_STATE, SECS_SV.ELPT2_LOCK_STATE_PREV, SECS_Event.ELPT2_LOCK_State_Change, "UNLOCKED");
-                                }
-                            }
-
-
-
-
                             break;
                         case "ILPT1-POS-Clamp":
                         case "ILPT1-POS-Unclamp":
@@ -2333,57 +2574,7 @@ namespace SECSInterface
                                 ReportEvent(SECS_SV.GRIPPER_FOUP_STATE, SECS_SV.GRIPPER_FOUP_STATE_PREV, SECS_Event.Gripper_FOUP_State_Change, "GRIPPERS_EMPTY");
                             }
                             break;
-                        case "ELPT1-Place1":
-                        case "ELPT1-Place2":
-                        case "ELPT1-Place3":
-
-
-                            if (IO_State.ContainsKey("ELPT1-Place1") && IO_State.ContainsKey("ELPT1-Place2") && IO_State.ContainsKey("ELPT1-Place3"))
-                            {
-                                if (IO_State["ELPT1-Place1"].Equals("1") && IO_State["ELPT1-Place2"].Equals("1") && IO_State["ELPT1-Place3"].Equals("1"))
-                                {
-                                    chk = true;
-
-                                }
-                                else
-                                {
-
-                                }
-                            }
-                            if (chk)
-                            {
-                                //param.Add("@Target", "ELPT1");
-                                //_Report.NewTask(Guid.NewGuid().ToString(), TaskFlowManagement.Command.CLAMP_ELPT, param);
-                            }
-                            else
-                            {
-                                //ReportEvent(SECS_SV.ELPT1_FOUP_STATE, SECS_SV.ELPT1_FOUP_STATE_PREV, SECS_Event.ELPT1_FOUP_State_Change, "READY_TO_LOAD");
-                            }
-                            break;
-                        case "ELPT2-Place1":
-                        case "ELPT2-Place2":
-                        case "ELPT2-Place3":
-                            if (IO_State.ContainsKey("ELPT2-Place1") && IO_State.ContainsKey("ELPT2-Place2") && IO_State.ContainsKey("ELPT2-Place3"))
-                            {
-                                if (IO_State["ELPT2-Place1"].Equals("1") && IO_State["ELPT2-Place2"].Equals("1") && IO_State["ELPT2-Place3"].Equals("1"))
-                                {
-                                    chk = true;
-
-                                }
-                                else
-                                {
-
-                                }
-                            }
-                            if (chk)
-                            {
-
-                            }
-                            else
-                            {
-                                //ReportEvent(SECS_SV.ELPT2_FOUP_STATE, SECS_SV.ELPT2_FOUP_STATE_PREV, SECS_Event.ELPT2_FOUP_State_Change, "READY_TO_LOAD");
-                            }
-                            break;
+                        
 
                     }
                 }
